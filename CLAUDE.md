@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Sylph** - A minimal Next.js 15 portfolio/blog template with authentication and real-time features.
+This is a job board for startups. It is a Next.js 15.3.3 (App Router) + TypeScript + React 19 project. It uses Convex (real-time database + authentication) for the backend. It uses Tailwind CSS + Radix UI themes for the frontend. 
+
+The primary user is a job seeker, who can upload their resume and search for jobs that match their profile. They can see details about the company – although the features like seeing rounds or equity are not yet implemented.
 
 **Tech Stack:**
 

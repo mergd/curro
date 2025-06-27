@@ -21,3 +21,7 @@ const authContext = customCtx(async (ctx: QueryCtx | MutationCtx) => {
 export const authenticatedQuery = customQuery(query, authContext);
 
 export const authenticatedMutation = customMutation(mutation, authContext);
+
+export const getUserId = async (ctx: QueryCtx | MutationCtx) => {
+  return await getAuthUserId(ctx);
+};
