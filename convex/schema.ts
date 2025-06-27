@@ -63,6 +63,18 @@ export default defineSchema({
       ),
     ),
     locations: v.optional(v.array(v.string())), // Company office locations
+
+    // Error tracking for rolling 24-hour window
+    scrapingErrors: v.optional(
+      v.array(
+        v.object({
+          timestamp: v.number(), // When the error occurred
+          errorType: v.string(), // Type of error (e.g., "fetch_failed", "parse_error", "rate_limited")
+          errorMessage: v.string(), // Error details
+          url: v.optional(v.string()), // URL that caused the error
+        }),
+      ),
+    ),
   }).index("by_name", ["name"]),
 
   jobs: defineTable({
@@ -144,11 +156,16 @@ export default defineSchema({
     ),
 
     // Equity information
-    equity: v.optional(v.object({
-      offered: v.boolean(), // Whether equity is offered
-      percentage: v.optional(v.number()), // Equity percentage if offered
-      details: v.optional(v.string()), // Additional equity details
-    })),
+    equity: v.optional(
+      v.object({
+        offered: v.boolean(), // Whether equity is offered
+        percentage: v.optional(v.number()), // Equity percentage if offered
+        details: v.optional(v.string()), // Additional equity details
+      }),
+    ),
+
+    // Tracking
+    lastScraped: v.optional(v.number()), // Timestamp when this job was last seen during scraping
   }).index("by_company", ["companyId"]),
 
   applications: defineTable({

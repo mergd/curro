@@ -1,17 +1,13 @@
 import { UserButton } from "@/components/auth";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import * as FadeIn from "@/components/motion/staggers/fade";
-import { Posts } from "@/components/posts";
 import { Footer } from "@/components/ui/footer";
-import { POSTS_DIRECTORY } from "@/lib/constants";
-import { getPosts } from "@/lib/mdx";
 
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import Link from "next/link";
 
 export default async function Home() {
-  const blogPosts = getPosts(POSTS_DIRECTORY);
   const t = await getTranslations("Home");
   return (
     <FadeIn.Container>
@@ -46,9 +42,6 @@ export default async function Home() {
             Go to Dashboard
           </Link>
         </div>
-      </FadeIn.Item>
-      <FadeIn.Item>
-        <Posts category={POSTS_DIRECTORY} posts={blogPosts} />
       </FadeIn.Item>
 
       <div className="mt-2.5" />

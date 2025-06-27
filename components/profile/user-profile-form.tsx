@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useForm } from "react-hook-form";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useMutation, useQuery } from "convex/react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const formSchema = z.object({
   yearsOfExperience: z.number().min(0),
@@ -36,8 +37,13 @@ export function UserProfileForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const fourFacts = [values.fact1, values.fact2, values.fact3, values.fact4].filter(Boolean);
-    const interests = values.interests.split(",").map(s => s.trim());
+    const fourFacts = [
+      values.fact1,
+      values.fact2,
+      values.fact3,
+      values.fact4,
+    ].filter(Boolean);
+    const interests = values.interests.split(",").map((s) => s.trim());
 
     await updateUserProfile({
       yearsOfExperience: values.yearsOfExperience,
@@ -61,22 +67,52 @@ export function UserProfileForm() {
     <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="yearsOfExperience">Years of Experience</label>
-        <input {...form.register("yearsOfExperience", { valueAsNumber: true })} id="yearsOfExperience" type="number" className="border p-2 w-full" />
+        <input
+          {...form.register("yearsOfExperience", { valueAsNumber: true })}
+          id="yearsOfExperience"
+          type="number"
+          className="border p-2 w-full"
+        />
       </div>
       <div>
         <label htmlFor="interests">Interests (comma-separated)</label>
-        <input {...form.register("interests")} id="interests" className="border p-2 w-full" />
+        <input
+          {...form.register("interests")}
+          id="interests"
+          className="border p-2 w-full"
+        />
       </div>
       <div>
         <label>4 Most Impressive Facts</label>
-        <input {...form.register("fact1")} placeholder="Fact 1" className="border p-2 w-full mt-2" />
-        <input {...form.register("fact2")} placeholder="Fact 2" className="border p-2 w-full mt-2" />
-        <input {...form.register("fact3")} placeholder="Fact 3" className="border p-2 w-full mt-2" />
-        <input {...form.register("fact4")} placeholder="Fact 4" className="border p-2 w-full mt-2" />
+        <input
+          {...form.register("fact1")}
+          placeholder="Fact 1"
+          className="border p-2 w-full mt-2"
+        />
+        <input
+          {...form.register("fact2")}
+          placeholder="Fact 2"
+          className="border p-2 w-full mt-2"
+        />
+        <input
+          {...form.register("fact3")}
+          placeholder="Fact 3"
+          className="border p-2 w-full mt-2"
+        />
+        <input
+          {...form.register("fact4")}
+          placeholder="Fact 4"
+          className="border p-2 w-full mt-2"
+        />
       </div>
       <div>
         <label htmlFor="resume">Resume</label>
-        <input type="file" id="resume" onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)} className="border p-2 w-full" />
+        <input
+          type="file"
+          id="resume"
+          onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+          className="border p-2 w-full"
+        />
       </div>
       <button type="submit" className="bg-blue-500 text-white p-2 rounded">
         Save Profile

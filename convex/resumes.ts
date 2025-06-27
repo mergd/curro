@@ -1,5 +1,6 @@
-import { mutation } from "./_generated/server";
 import { v } from "convex/values";
+
+import { mutation } from "./_generated/server";
 import { getUserId } from "./_utils";
 
 export const generateUploadUrl = mutation(async (ctx) => {
@@ -20,7 +21,7 @@ export const saveStorageId = mutation({
       .unique();
 
     if (!userProfile) {
-        throw new Error("User profile not found");
+      throw new Error("User profile not found");
     }
 
     const resumeId = await ctx.db.insert("resumes", { userId, storageId });
