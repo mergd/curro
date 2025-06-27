@@ -1,0 +1,12 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+This is a repo with convex, Nextjs 15, React 19, and convex auth.
+
+When starting off, run `pnpm run auth:setup` to setup jwt.
+
+If the app is not related to blogging, feel free to remove a lot of the code related to mdx and the blog.
+
+Remove the boilerplate around the notes logic - that's only there as examples.
