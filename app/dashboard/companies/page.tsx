@@ -1,5 +1,3 @@
-import { Companies } from "@/components/admin/companies";
-
 export default function CompaniesPage() {
   return (
     <div className="space-y-6">
@@ -9,7 +7,6 @@ export default function CompaniesPage() {
           Manage the companies that are scraped for job postings.
         </p>
       </div>
-      <Companies />
     </div>
   );
 }

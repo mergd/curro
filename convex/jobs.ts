@@ -16,7 +16,34 @@ export const get = query({
 
 export const list = query({
   handler: async (ctx) => {
-    const jobs = await ctx.db.query("jobs").collect();
+    const jobs = await ctx.db
+      .query("jobs")
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    const jobsWithCompany = await Promise.all(
+      jobs.map(async (job) => {
+        const company = await ctx.db.get(job.companyId);
+        return { ...job, company };
+      }),
+    );
+
+    return jobsWithCompany;
+  },
+});
+
+export const listAll = query({
+  args: { includeDeleted: v.optional(v.boolean()) },
+  handler: async (ctx, { includeDeleted = false }) => {
+    let jobsQuery = ctx.db.query("jobs");
+
+    if (!includeDeleted) {
+      jobsQuery = jobsQuery.filter((q) =>
+        q.eq(q.field("deletedAt"), undefined),
+      );
+    }
+
+    const jobs = await jobsQuery.collect();
 
     const jobsWithCompany = await Promise.all(
       jobs.map(async (job) => {
@@ -185,6 +212,7 @@ export const update = mutation({
       }),
     ),
     lastScraped: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { id, ...updateData } = args;
@@ -217,5 +245,42 @@ export const updateLastScraped = mutation({
   },
   handler: async (ctx, { id, timestamp }) => {
     await ctx.db.patch(id, { lastScraped: timestamp });
+  },
+});
+
+export const softDelete = mutation({
+  args: {
+    id: v.id("jobs"),
+  },
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, { deletedAt: Date.now() });
+  },
+});
+
+export const findActiveJobsByCompany = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, { companyId }) => {
+    return await ctx.db
+      .query("jobs")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+  },
+});
+
+export const findActiveJobUrlsByCompany = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, { companyId }) => {
+    const jobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    return jobs.map((job) => job.url);
   },
 });

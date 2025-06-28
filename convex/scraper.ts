@@ -191,10 +191,21 @@ export const fetchAndParseJobs = internalAction({
       let newJobsCount = 0;
       let skippedJobsCount = 0;
 
+      // Get all currently active job URLs for this company to track which ones are still available
+      const activeJobUrls = await ctx.runQuery(
+        api.jobs.findActiveJobUrlsByCompany,
+        { companyId },
+      );
+
+      // Track which URLs we found during this scrape
+      const foundUrls = new Set<string>();
+
       for (const link of links) {
         const absoluteUrl = link.startsWith("http")
           ? link
           : new URL(link, jobBoardUrl).href;
+
+        foundUrls.add(absoluteUrl);
 
         // Check if job was recently scraped (within a week)
         const recentJob = await ctx.runQuery(
@@ -249,8 +260,30 @@ export const fetchAndParseJobs = internalAction({
         }
       }
 
+      // Soft delete jobs that are no longer available on the job board
+      let softDeletedCount = 0;
+      for (const activeUrl of activeJobUrls) {
+        if (!foundUrls.has(activeUrl)) {
+          // This job is no longer available, soft delete it
+          const jobToDelete = await ctx.runQuery(api.jobs.findByUrl, {
+            url: activeUrl,
+          });
+
+          if (jobToDelete && !jobToDelete.deletedAt) {
+            await ctx.runMutation(api.jobs.softDelete, {
+              id: jobToDelete._id,
+            });
+            softDeletedCount++;
+            console.log(`Soft deleted job: ${activeUrl}`);
+          }
+        }
+      }
+
       console.log(`${newJobsCount} new jobs found`);
       console.log(`${skippedJobsCount} skipped jobs`);
+      console.log(
+        `${softDeletedCount} jobs soft deleted (no longer available)`,
+      );
 
       return {
         success: true,
@@ -258,6 +291,7 @@ export const fetchAndParseJobs = internalAction({
         totalFound,
         newJobsCount,
         skippedJobsCount,
+        softDeletedCount,
       };
     } catch (error) {
       const errorMessage =

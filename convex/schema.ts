@@ -203,6 +203,7 @@ export default defineSchema({
 
     // Tracking
     lastScraped: v.optional(v.number()), // Timestamp when this job was last seen during scraping
+    deletedAt: v.optional(v.number()), // Timestamp when this job was soft deleted (no longer available on job board)
   }).index("by_company", ["companyId"]),
 
   applications: defineTable({

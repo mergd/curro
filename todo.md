@@ -1,0 +1,1 @@
+[ ] Move logic over to a puppeteer server and script so it's less brittle

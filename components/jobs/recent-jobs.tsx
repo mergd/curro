@@ -1,0 +1,42 @@
+"use client";
+
+import { useQuery } from "convex/react";
+
+import { api } from "../../convex/_generated/api";
+import { JobPreviewCard } from "./job-preview-card";
+import { JobPreviewSkeleton } from "./job-preview-skeleton";
+
+export function RecentJobs() {
+  const jobs = useQuery(api.jobs.list);
+
+  if (!jobs) {
+    return (
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <JobPreviewSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  // Show only the 6 most recent jobs
+  const recentJobs = jobs
+    .sort((a, b) => b._creationTime - a._creationTime)
+    .slice(0, 6);
+
+  if (recentJobs.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">No jobs available yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {recentJobs.map((job) => (
+        <JobPreviewCard key={job._id} job={job} />
+      ))}
+    </div>
+  );
+}
