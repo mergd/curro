@@ -127,8 +127,22 @@ export default defineSchema({
       ),
     ),
 
-    // Internship information
-    isInternship: v.optional(v.boolean()),
+    // Role subcategory (e.g., fullstack, backend, frontend for SWE)
+    roleSubcategory: v.optional(v.string()),
+
+    // Employment type (defaults to permanent)
+    employmentType: v.optional(
+      v.union(
+        v.literal("permanent"),
+        v.literal("contract"),
+        v.literal("part-time"),
+        v.literal("temporary"),
+        v.literal("freelance"),
+        v.literal("internship"),
+      ),
+    ),
+
+    // Internship information (only relevant when employmentType is "internship")
     internshipRequirements: v.optional(
       v.object({
         graduationDate: v.optional(v.string()), // Expected graduation date
@@ -140,20 +154,43 @@ export default defineSchema({
     // Additional text requirements that can't be captured in structured fields
     additionalRequirements: v.optional(v.string()),
 
-    // Salary information
-    salaryRange: v.optional(
-      v.object({
-        min: v.optional(v.number()),
-        max: v.optional(v.number()),
-        currency: v.optional(v.string()),
-        period: v.optional(v.union(v.literal("hourly"), v.literal("annual"))),
-      }),
+    // Compensation information (mutually exclusive salary structures)
+    compensation: v.optional(
+      v.union(
+        v.object({
+          type: v.literal("annual"),
+          min: v.optional(v.number()),
+          max: v.optional(v.number()),
+          currency: v.optional(v.string()),
+        }),
+        v.object({
+          type: v.literal("hourly"),
+          min: v.optional(v.number()),
+          max: v.optional(v.number()),
+          currency: v.optional(v.string()),
+        }),
+        v.object({
+          type: v.literal("weekly"),
+          min: v.optional(v.number()),
+          max: v.optional(v.number()),
+          currency: v.optional(v.string()),
+        }),
+        v.object({
+          type: v.literal("monthly"),
+          min: v.optional(v.number()),
+          max: v.optional(v.number()),
+          currency: v.optional(v.string()),
+        }),
+      ),
     ),
 
     // Remote work options
     remoteOptions: v.optional(
       v.union(v.literal("on-site"), v.literal("remote"), v.literal("hybrid")),
     ),
+
+    // Remote timezone preferences (e.g., ["CEST", "PST", "EST"])
+    remoteTimezonePreferences: v.optional(v.array(v.string())),
 
     // Equity information
     equity: v.optional(
