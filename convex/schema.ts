@@ -2,6 +2,23 @@ import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+import {
+  APPLICATION_METHODS,
+  APPLICATION_STATUSES,
+  COMPANY_CATEGORIES,
+  COMPANY_STAGES,
+  COMPANY_SUBCATEGORIES,
+  COMPANY_TAGS,
+  COMPENSATION_TYPES,
+  createUnionValidator,
+  EDUCATION_LEVELS,
+  EMPLOYMENT_TYPES,
+  INTERVIEW_TYPES,
+  REMOTE_OPTIONS,
+  ROLE_TYPES,
+  SOURCE_TYPES,
+} from "./constants";
+
 export default defineSchema({
   ...authTables,
 
@@ -24,29 +41,13 @@ export default defineSchema({
     website: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
     jobBoardUrl: v.string(),
-    sourceType: v.union(
-      v.literal("ashby"),
-      v.literal("greenhouse"),
-      v.literal("other"),
-    ),
+    sourceType: createUnionValidator(SOURCE_TYPES),
     lastScraped: v.optional(v.number()),
     numberOfEmployees: v.optional(v.string()),
-    stage: v.optional(
-      v.union(
-        v.literal("pre-seed"),
-        v.literal("seed"),
-        v.literal("series-a"),
-        v.literal("series-b"),
-        v.literal("series-c"),
-        v.literal("series-d"),
-        v.literal("series-e"),
-        v.literal("growth"),
-        v.literal("pre-ipo"),
-        v.literal("public"),
-        v.literal("acquired"),
-      ),
-    ),
-    tags: v.optional(v.array(v.string())), // e.g., ["fintech", "saas", "b2b", "ai/ml"]
+    stage: v.optional(createUnionValidator(COMPANY_STAGES)),
+    category: v.optional(v.array(createUnionValidator(COMPANY_CATEGORIES))),
+    subcategory: v.optional(v.array(v.string())), // Flexible subcategories
+    tags: v.optional(v.array(v.string())), // Flexible tags for any company attributes
     recentFinancing: v.optional(
       v.object({
         amount: v.string(),
@@ -87,18 +88,7 @@ export default defineSchema({
     source: v.optional(v.string()), // e.g., Ashby, Greenhouse
 
     // Education requirements
-    educationLevel: v.optional(
-      v.union(
-        v.literal("high-school"),
-        v.literal("associates"),
-        v.literal("bachelors"),
-        v.literal("masters"),
-        v.literal("phd"),
-        v.literal("bootcamp"),
-        v.literal("self-taught"),
-        v.literal("no-requirement"),
-      ),
-    ),
+    educationLevel: v.optional(createUnionValidator(EDUCATION_LEVELS)),
 
     // Experience requirements
     yearsOfExperience: v.optional(
@@ -109,38 +99,13 @@ export default defineSchema({
     ),
 
     // Role type
-    roleType: v.optional(
-      v.union(
-        v.literal("software-engineering"),
-        v.literal("data-science"),
-        v.literal("product-management"),
-        v.literal("design"),
-        v.literal("marketing"),
-        v.literal("sales"),
-        v.literal("operations"),
-        v.literal("finance"),
-        v.literal("hr"),
-        v.literal("legal"),
-        v.literal("customer-success"),
-        v.literal("business-development"),
-        v.literal("general-apply"),
-      ),
-    ),
+    roleType: v.optional(createUnionValidator(ROLE_TYPES)),
 
     // Role subcategory (e.g., fullstack, backend, frontend for SWE)
     roleSubcategory: v.optional(v.string()),
 
     // Employment type (defaults to permanent)
-    employmentType: v.optional(
-      v.union(
-        v.literal("permanent"),
-        v.literal("contract"),
-        v.literal("part-time"),
-        v.literal("temporary"),
-        v.literal("freelance"),
-        v.literal("internship"),
-      ),
-    ),
+    employmentType: v.optional(createUnionValidator(EMPLOYMENT_TYPES)),
 
     // Internship information (only relevant when employmentType is "internship")
     internshipRequirements: v.optional(
@@ -157,37 +122,19 @@ export default defineSchema({
     // Compensation information (mutually exclusive salary structures)
     compensation: v.optional(
       v.union(
-        v.object({
-          type: v.literal("annual"),
-          min: v.optional(v.number()),
-          max: v.optional(v.number()),
-          currency: v.optional(v.string()),
-        }),
-        v.object({
-          type: v.literal("hourly"),
-          min: v.optional(v.number()),
-          max: v.optional(v.number()),
-          currency: v.optional(v.string()),
-        }),
-        v.object({
-          type: v.literal("weekly"),
-          min: v.optional(v.number()),
-          max: v.optional(v.number()),
-          currency: v.optional(v.string()),
-        }),
-        v.object({
-          type: v.literal("monthly"),
-          min: v.optional(v.number()),
-          max: v.optional(v.number()),
-          currency: v.optional(v.string()),
-        }),
+        ...COMPENSATION_TYPES.map((type) =>
+          v.object({
+            type: v.literal(type),
+            min: v.optional(v.number()),
+            max: v.optional(v.number()),
+            currency: v.optional(v.string()),
+          }),
+        ),
       ),
     ),
 
     // Remote work options
-    remoteOptions: v.optional(
-      v.union(v.literal("on-site"), v.literal("remote"), v.literal("hybrid")),
-    ),
+    remoteOptions: v.optional(createUnionValidator(REMOTE_OPTIONS)),
 
     // Remote timezone preferences (e.g., ["CEST", "PST", "EST"])
     remoteTimezonePreferences: v.optional(v.array(v.string())),
@@ -212,34 +159,14 @@ export default defineSchema({
     companyId: v.id("companies"),
 
     // Application status
-    status: v.union(
-      v.literal("interested"), // Marked as interested but not applied yet
-      v.literal("applied"),
-      v.literal("phone-screen"),
-      v.literal("technical-interview"),
-      v.literal("onsite-interview"),
-      v.literal("final-round"),
-      v.literal("offer"),
-      v.literal("accepted"),
-      v.literal("rejected"),
-      v.literal("withdrawn"),
-    ),
+    status: createUnionValidator(APPLICATION_STATUSES),
 
     // Timeline
     appliedAt: v.optional(v.number()), // Timestamp when applied
     lastUpdated: v.number(), // Timestamp of last status update
 
     // Application details
-    applicationMethod: v.optional(
-      v.union(
-        v.literal("company-website"),
-        v.literal("linkedin"),
-        v.literal("referral"),
-        v.literal("recruiter"),
-        v.literal("job-board"),
-        v.literal("other"),
-      ),
-    ),
+    applicationMethod: v.optional(createUnionValidator(APPLICATION_METHODS)),
 
     // Contact information
     recruiterContact: v.optional(
@@ -258,16 +185,7 @@ export default defineSchema({
     interviewRounds: v.optional(
       v.array(
         v.object({
-          type: v.union(
-            v.literal("phone-screen"),
-            v.literal("technical"),
-            v.literal("behavioral"),
-            v.literal("system-design"),
-            v.literal("cultural-fit"),
-            v.literal("onsite"),
-            v.literal("final"),
-            v.literal("other"),
-          ),
+          type: createUnionValidator(INTERVIEW_TYPES),
           scheduledAt: v.optional(v.number()),
           completedAt: v.optional(v.number()),
           feedback: v.optional(v.string()),

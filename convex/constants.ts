@@ -1,5 +1,19 @@
-// AI Model Configuration
-export const AI_MODEL = "google/gemini-2.5-flash-preview-05-20";
-
-// Scraping Configuration
-export const WEEK_IN_MS = 7 * 24 * 60 * 60 * 1000;
+// Re-export constants from lib for convex functions
+export {
+  WEEK_IN_MS,
+  COMPANY_STAGES,
+  SOURCE_TYPES,
+  EMPLOYEE_COUNT_RANGES,
+  COMPANY_CATEGORIES,
+  COMPANY_SUBCATEGORIES,
+  COMPANY_TAGS,
+  EDUCATION_LEVELS,
+  ROLE_TYPES,
+  EMPLOYMENT_TYPES,
+  COMPENSATION_TYPES,
+  REMOTE_OPTIONS,
+  APPLICATION_STATUSES,
+  APPLICATION_METHODS,
+  INTERVIEW_TYPES,
+  createUnionValidator,
+} from "../lib/constants";

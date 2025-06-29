@@ -1,8 +1,6 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
 import { z } from "zod";
 
-import { AI_MODEL } from "../constants";
+import { cleanHtmlForAI, generateStructuredOnly } from "../../lib/ai";
 
 // Zod schemas for structured parsing
 const ParsedJobSchema = z.object({
@@ -117,22 +115,13 @@ export type ParsedJob = z.infer<typeof ParsedJobSchema>;
 export type JobListingParseResult = z.infer<typeof JobListingParseResultSchema>;
 export type JobDetailParseResult = z.infer<typeof JobDetailParseResultSchema>;
 
-// OpenRouter client configuration for Gemini
-const openRouterClient = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
-
 export async function parseJobListings(
   html: string,
 ): Promise<JobListingParseResult> {
   try {
-    const cleanedHtml = cleanHtmlForParsing(html, 6000);
+    const cleanedHtml = cleanHtmlForAI(html, 6000);
 
-    const { object } = await generateObject({
-      model: openRouterClient(AI_MODEL),
-      schema: JobListingParseResultSchema,
-      prompt: `
-Extract job listings from this HTML content. Focus on finding:
+    const prompt = `Extract job listings from this HTML content. Focus on finding:
 1. Job titles and their URLs/links
 2. Brief descriptions if visible on the listing page
 3. Location information if mentioned - normalize to "City, XXX" format where XXX is 3-char country code
@@ -147,11 +136,9 @@ For locations, normalize common abbreviations:
 - Berlin → "Berlin, DEU"
 
 HTML content to parse:
-${cleanedHtml}
-      `,
-    });
+${cleanedHtml}`;
 
-    return object;
+    return await generateStructuredOnly(JobListingParseResultSchema, prompt);
   } catch (error) {
     console.error("AI parsing error:", error);
     // Fallback to basic regex parsing
@@ -163,13 +150,9 @@ export async function parseJobDetails(
   html: string,
 ): Promise<JobDetailParseResult> {
   try {
-    const cleanedHtml = cleanHtmlForParsing(html, 12000);
+    const cleanedHtml = cleanHtmlForAI(html, 12000);
 
-    const { object } = await generateObject({
-      model: openRouterClient(AI_MODEL),
-      schema: JobDetailParseResultSchema,
-      prompt: `
-Extract detailed job information from this job posting HTML. Look for:
+    const prompt = `Extract detailed job information from this job posting HTML. Look for:
 
 1. **Education Requirements**: Look for mentions of degree requirements (high school, bachelor's, master's, PhD, bootcamp, self-taught, or no requirements)
 2. **Experience**: Extract years of experience required (e.g., "2-5 years", "3+ years")
@@ -194,41 +177,13 @@ Extract detailed job information from this job posting HTML. Look for:
 Be conservative - only include information that is clearly stated. If unsure, omit the field.
 
 HTML content to parse:
-${cleanedHtml}
-      `,
-    });
+${cleanedHtml}`;
 
-    return object;
+    return await generateStructuredOnly(JobDetailParseResultSchema, prompt);
   } catch (error) {
     console.error("AI parsing error:", error);
     return {}; // Return empty object on error
   }
-}
-
-function cleanHtmlForParsing(html: string, maxLength: number = 6000): string {
-  // Remove script and style tags
-  let cleaned = html.replace(
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-    "",
-  );
-  cleaned = cleaned.replace(
-    /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
-    "",
-  );
-
-  // Remove comments
-  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, "");
-
-  // Remove excessive whitespace but preserve some structure
-  cleaned = cleaned.replace(/\s+/g, " ");
-  cleaned = cleaned.replace(/>\s+</g, "><");
-
-  // Truncate if too long
-  if (cleaned.length > maxLength) {
-    cleaned = cleaned.substring(0, maxLength) + "...";
-  }
-
-  return cleaned.trim();
 }
 
 function fallbackParseJobListings(html: string): JobListingParseResult {

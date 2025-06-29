@@ -25,6 +25,7 @@ import type * as parsers_aiParser from "../parsers/aiParser.js";
 import type * as resumes from "../resumes.js";
 import type * as scraper from "../scraper.js";
 import type * as userProfiles from "../userProfiles.js";
+import type * as utils from "../utils.js";
 
 import type {
   ApiFromModules,
@@ -58,6 +59,7 @@ declare const fullApi: ApiFromModules<{
   resumes: typeof resumes;
   scraper: typeof scraper;
   userProfiles: typeof userProfiles;
+  utils: typeof utils;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

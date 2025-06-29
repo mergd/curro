@@ -22,22 +22,36 @@
   */
 
   :root {
+    /* Main theme variables that map to Tailwind config */
     --bg: var(--gray-1);
     --fg: var(--gray-12);
     --muted: var(--gray-3);
+    --hover: var(--gray-4);
     --border: var(--gray-6);
+
+    /* Scrollbar */
     --scrollbar-thumb: var(--gray-4);
     --scrollbar-track: transparent;
+
+    /* Selection */
     --selection-background: var(--blue-3);
     --selection-foreground: var(--blue-11);
+
+    /* Keyboard shortcuts */
     --kbd-background: var(--gray-3);
     --kbd-foreground: var(--gray-11);
     --kbd-border: var(--gray-4);
+
+    /* Highlight */
     --highlight-background: var(--blue-3);
     --highlight-foreground: var(--blue-11);
+
+    /* Radius */
     --radius-small: 4px;
     --radius-base: 8px;
     --radius-large: 12px;
+
+    /* shadcn/ui variables */
     --background: var(--gray-1);
     --foreground: var(--gray-12);
     --card: var(--gray-1);

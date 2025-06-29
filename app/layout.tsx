@@ -30,7 +30,7 @@ export default async function RootLayout({
         <Providers messages={messages} locale={locale}>
           <Theme accentColor="gray" radius="large" scaling="90%">
             <Toaster />
-            <main className="isolate mx-auto max-w-screen-sm overflow-x-hidden px-6 py-24 md:overflow-x-visible ">
+            <main className="isolate mx-auto ">
               <article className="article">{children}</article>
             </main>
           </Theme>

@@ -80,9 +80,9 @@ export const EmptyStateMessage: React.FC<EmptyStateMessageProps> = ({
       )}
     >
       {IconComponent && (
-        <div className="flex-shrink-0 mr-3">{IconComponent}</div>
+        <div className="shrink-0 mr-3">{IconComponent}</div>
       )}
-      <div className="flex-grow">
+      <div className="grow">
         <h3 className={cn("font-medium text-base", textClasses)}>{title}</h3>
         {description && (
           <p className={cn("text-sm", textClasses, "opacity-90 mt-0.5")}>

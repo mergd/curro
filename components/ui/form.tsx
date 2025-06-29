@@ -1,38 +1,36 @@
 "use client";
 
-import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
+import type * as LabelPrimitive from "@radix-ui/react-label";
+import type { ControllerProps, FieldPath, FieldValues } from "react-hook-form";
+
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+
 import { Slot } from "@radix-ui/react-slot";
+import * as React from "react";
 import {
   Controller,
   FormProvider,
   useFormContext,
   useFormState,
-  type ControllerProps,
-  type FieldPath,
-  type FieldValues,
 } from "react-hook-form";
-
-import { cn } from "@/lib/utils";
-import { Label } from "@/components/ui/label";
-import { useTranslations } from "next-intl";
 
 const Form = FormProvider;
 
 type FormFieldContextValue<
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 > = {
   name: TName;
 };
 
 const FormFieldContext = React.createContext<FormFieldContextValue>(
-  {} as FormFieldContextValue
+  {} as FormFieldContextValue,
 );
 
 const FormField = <
   TFieldValues extends FieldValues = FieldValues,
-  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
 >({
   ...props
 }: ControllerProps<TFieldValues, TName>) => {
@@ -71,7 +69,7 @@ type FormItemContextValue = {
 };
 
 const FormItemContext = React.createContext<FormItemContextValue>(
-  {} as FormItemContextValue
+  {} as FormItemContextValue,
 );
 
 function FormItem({ className, ...props }: React.ComponentProps<"div">) {
@@ -88,42 +86,24 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-interface FormLabelProps
-  extends React.ComponentProps<typeof LabelPrimitive.Root> {
-  required?: boolean;
-  optional?: boolean;
-}
-
 function FormLabel({
   className,
-  required,
-  optional,
-  children,
+  required = false,
   ...props
-}: FormLabelProps) {
+}: React.ComponentProps<typeof LabelPrimitive.Root> & { required?: boolean }) {
   const { error, formItemId } = useFormField();
-  const t = useTranslations("form.address");
 
   return (
-    <Label
-      data-slot="form-label"
-      data-error={!!error}
-      className={cn("data-[error=true]:text-destructive", className)}
-      htmlFor={formItemId}
-      {...props}
-    >
-      {children}
-      {required && (
-        <span className="ml-0.5 text-destructive" aria-label="required">
-          *
-        </span>
-      )}
-      {optional && (
-        <span className="ml-1 text-muted-foreground text-sm font-normal">
-          {t("optional")}
-        </span>
-      )}
-    </Label>
+    <div className="block -mb-1">
+      <Label
+        data-slot="form-label"
+        data-error={!!error}
+        className={cn("data-[error=true]:text-destructive", className)}
+        htmlFor={formItemId}
+        {...props}
+      />
+      {required && <span className="text-destructive">*</span>}
+    </div>
   );
 }
 

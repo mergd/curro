@@ -17,7 +17,7 @@ export default function HomePage() {
           <div className="space-y-4">
             <h1 className="text-5xl font-bold tracking-tight">
               Find Your Next{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Dream Job
               </span>
             </h1>

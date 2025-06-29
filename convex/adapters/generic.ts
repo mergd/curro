@@ -1,8 +1,6 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { generateObject } from "ai";
 import { z } from "zod";
 
-import { AI_MODEL } from "../constants";
+import { cleanHtmlForAI, generateStructuredOnly } from "../../lib/ai";
 import { BaseATSAdapter } from "./base";
 
 // Simple schema for extracting just URLs
@@ -11,11 +9,6 @@ const JobLinksParseResultSchema = z.object({
 });
 
 type JobLinksParseResult = z.infer<typeof JobLinksParseResultSchema>;
-
-// OpenRouter client configuration
-const openRouterClient = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY!,
-});
 
 export class GenericAdapter extends BaseATSAdapter {
   name = "Generic";
@@ -47,13 +40,9 @@ export class GenericAdapter extends BaseATSAdapter {
   }
 
   private async parseJobLinks(html: string): Promise<JobLinksParseResult> {
-    const cleanedHtml = this.cleanHtmlForParsing(html, 6000);
+    const cleanedHtml = cleanHtmlForAI(html, 6000);
 
-    const { object } = await generateObject({
-      model: openRouterClient(AI_MODEL),
-      schema: JobLinksParseResultSchema,
-      prompt: `
-Extract job listing URLs from this HTML content. Only return the URLs/links that lead to individual job postings.
+    const prompt = `Extract job listing URLs from this HTML content. Only return the URLs/links that lead to individual job postings.
 
 Look for:
 - URLs containing "/jobs/", "/careers/", "/job/", "/position/"
@@ -62,36 +51,8 @@ Look for:
 Return only the URLs as an array of strings. Ignore navigation links, footer links, or other non-job-related links.
 
 HTML content to parse:
-${cleanedHtml}
-      `,
-    });
+${cleanedHtml}`;
 
-    return object;
-  }
-
-  private cleanHtmlForParsing(html: string, maxLength: number = 6000): string {
-    // Remove script and style tags
-    let cleaned = html.replace(
-      /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-      "",
-    );
-    cleaned = cleaned.replace(
-      /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
-      "",
-    );
-
-    // Remove comments
-    cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, "");
-
-    // Remove excessive whitespace but preserve some structure
-    cleaned = cleaned.replace(/\s+/g, " ");
-    cleaned = cleaned.replace(/>\s+</g, "><");
-
-    // Truncate if too long
-    if (cleaned.length > maxLength) {
-      cleaned = cleaned.substring(0, maxLength) + "...";
-    }
-
-    return cleaned.trim();
+    return await generateStructuredOnly(JobLinksParseResultSchema, prompt);
   }
 }

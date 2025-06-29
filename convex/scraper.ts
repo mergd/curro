@@ -7,7 +7,7 @@ import { action, internalAction } from "./_generated/server";
 import { AshbyAdapter } from "./adapters/ashby";
 import { GenericAdapter } from "./adapters/generic";
 import { GreenhouseAdapter } from "./adapters/greenhouse";
-import { WEEK_IN_MS } from "./constants";
+import { createUnionValidator, SOURCE_TYPES, WEEK_IN_MS } from "./constants";
 import { parseJobDetails } from "./parsers/aiParser";
 
 // Simple rate limiting with delays
@@ -123,11 +123,7 @@ export const fetchAndParseJobs = internalAction({
   args: {
     companyId: v.id("companies"),
     jobBoardUrl: v.string(),
-    sourceType: v.union(
-      v.literal("ashby"),
-      v.literal("greenhouse"),
-      v.literal("other"),
-    ),
+    sourceType: createUnionValidator(SOURCE_TYPES),
   },
   handler: async (ctx, { companyId, jobBoardUrl, sourceType }) => {
     try {

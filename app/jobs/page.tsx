@@ -5,13 +5,12 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { jobsColumns } from "@/components/jobs";
 import { Button } from "@/components/ui/button";
+import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
 
 import { PlusIcon } from "@radix-ui/react-icons";
 import { useQuery } from "convex/react";
 import { Suspense } from "react";
-
-import { api } from "../../convex/_generated/api";
 
 export default function JobsPage() {
   return (
