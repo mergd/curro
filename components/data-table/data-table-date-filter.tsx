@@ -1,8 +1,6 @@
 "use client";
 
-import { CalendarIcon, XCircleIcon } from "@phosphor-icons/react";
 import type { Column } from "@tanstack/react-table";
-import * as React from "react";
 import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +12,9 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { formatDateRelative } from "@/lib/formatters";
+
+import { CalendarIcon, XCircleIcon } from "@phosphor-icons/react";
+import * as React from "react";
 
 type DateSelection = Date[] | DateRange;
 
@@ -96,7 +97,7 @@ export function DataTableDateFilter<TData>({
         column.setFilterValue(date.getTime());
       }
     },
-    [column, multiple]
+    [column, multiple],
   );
 
   const onReset = React.useCallback(
@@ -104,7 +105,7 @@ export function DataTableDateFilter<TData>({
       event.stopPropagation();
       column.setFilterValue(undefined);
     },
-    [column]
+    [column],
   );
 
   const hasValue = React.useMemo(() => {
@@ -120,7 +121,7 @@ export function DataTableDateFilter<TData>({
     if (!range.from && !range.to) return "";
     if (range.from && range.to) {
       return `${formatDateRelative(range.from)} - ${formatDateRelative(
-        range.to
+        range.to,
       )}`;
     }
     return formatDateRelative(range.from ?? range.to);

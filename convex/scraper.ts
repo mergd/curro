@@ -1,5 +1,7 @@
 "use node";
 
+import type { BackoffInfo, ErrorInfo } from "./utils/backoff";
+
 import { v } from "convex/values";
 
 import { api, internal } from "./_generated/api";
@@ -9,6 +11,12 @@ import { GenericAdapter } from "./adapters/generic";
 import { GreenhouseAdapter } from "./adapters/greenhouse";
 import { createUnionValidator, SOURCE_TYPES, WEEK_IN_MS } from "./constants";
 import { parseJobDetails } from "./parsers/aiParser";
+import {
+  calculateBackoffAfterFailure,
+  calculateBackoffAfterSuccess,
+  getBackoffStatusDescription,
+  shouldSkipDueToBackoff,
+} from "./utils/backoff";
 
 // Simple rate limiting with delays
 const JOB_BOARD_DELAY_MS = 1000; // 1 second between job board requests
@@ -18,7 +26,7 @@ const JOB_DETAILS_DELAY_MS = 1000; // 1 second between job detail requests
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const MAX_ERRORS_PER_24H = 10; // Maximum errors before marking company as problematic
 
-// Helper function to add an error to the company's error log
+// Helper function to add an error to the company's error log and update backoff
 async function addCompanyError(
   ctx: any,
   companyId: string,
@@ -39,83 +47,144 @@ async function addCompanyError(
     (error: any) => error.timestamp > cutoffTime,
   );
 
-  recentErrors.push({
+  const newError = {
     timestamp: now,
     errorType,
     errorMessage,
     url,
-  });
+  };
 
-  // Update the company with the new error list
+  recentErrors.push(newError);
+
+  // Calculate new backoff info based on the failure
+  const newBackoffInfo = calculateBackoffAfterFailure(
+    company.backoffInfo,
+    errorType,
+    recentErrors,
+  );
+
+  // Update the company with the new error list and backoff info
   await ctx.runMutation(api.companies.update, {
     id: companyId,
     scrapingErrors: recentErrors,
+    backoffInfo: newBackoffInfo,
   });
 
   console.log(
-    `Added error for company ${companyId}: ${errorType} - ${errorMessage}. Total recent errors: ${recentErrors.length}`,
+    `Added error for company ${companyId}: ${errorType} - ${errorMessage}. ` +
+      `Recent errors: ${recentErrors.length}, Backoff: ${getBackoffStatusDescription(newBackoffInfo)}`,
   );
 }
 
-// Helper function to check if a company has too many errors in the last 24 hours
-async function shouldSkipCompanyDueToErrors(
+// Helper function to check if a company should be skipped due to backoff
+async function shouldSkipCompanyDueToBackoff(
   ctx: any,
   companyId: string,
-): Promise<boolean> {
+): Promise<{ shouldSkip: boolean; reason?: string }> {
   const company = await ctx.runQuery(api.companies.get, { id: companyId });
-  if (!company || !company.scrapingErrors) return false;
+  if (!company) return { shouldSkip: false };
 
-  const now = Date.now();
-  const cutoffTime = now - TWENTY_FOUR_HOURS_MS;
-
-  const recentErrors = company.scrapingErrors.filter(
-    (error: any) => error.timestamp > cutoffTime,
-  );
-
-  const shouldSkip = recentErrors.length >= MAX_ERRORS_PER_24H;
-
-  if (shouldSkip) {
-    console.log(
-      `Skipping company ${companyId} due to ${recentErrors.length} errors in the last 24 hours`,
-    );
+  // Check intelligent backoff
+  const shouldSkipBackoff = shouldSkipDueToBackoff(company.backoffInfo);
+  if (shouldSkipBackoff) {
+    const reason = getBackoffStatusDescription(company.backoffInfo);
+    console.log(`Skipping company ${companyId} due to backoff: ${reason}`);
+    return { shouldSkip: true, reason };
   }
 
-  return shouldSkip;
+  // Legacy check: also check old error-based logic as fallback
+  if (company.scrapingErrors) {
+    const now = Date.now();
+    const cutoffTime = now - TWENTY_FOUR_HOURS_MS;
+    const recentErrors = company.scrapingErrors.filter(
+      (error: any) => error.timestamp > cutoffTime,
+    );
+
+    if (recentErrors.length >= MAX_ERRORS_PER_24H) {
+      console.log(
+        `Skipping company ${companyId} due to ${recentErrors.length} errors in the last 24 hours (legacy check)`,
+      );
+      return {
+        shouldSkip: true,
+        reason: `${recentErrors.length} errors in 24h`,
+      };
+    }
+  }
+
+  return { shouldSkip: false };
+}
+
+// Helper function to mark a successful scrape and reduce backoff
+async function markSuccessfulScrape(ctx: any, companyId: string) {
+  const company = await ctx.runQuery(api.companies.get, { id: companyId });
+  if (!company) return;
+
+  // Calculate new backoff info after success
+  const newBackoffInfo = calculateBackoffAfterSuccess(company.backoffInfo);
+
+  // Update the company with reduced backoff
+  await ctx.runMutation(api.companies.update, {
+    id: companyId,
+    backoffInfo: newBackoffInfo,
+    lastScraped: Date.now(),
+  });
+
+  console.log(
+    `Successful scrape for company ${companyId}. Backoff: ${getBackoffStatusDescription(newBackoffInfo)}`,
+  );
 }
 
 export const scrape = action({
   args: {
     companyId: v.id("companies"),
   },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+    skippedDueToErrors: v.optional(v.boolean()),
+    atsType: v.optional(v.string()),
+    totalFound: v.optional(v.number()),
+    newJobsCount: v.optional(v.number()),
+    skippedJobsCount: v.optional(v.number()),
+    softDeletedCount: v.optional(v.number()),
+  }),
   handler: async (ctx, { companyId }) => {
     const company = await ctx.runQuery(api.companies.get, { id: companyId });
     if (!company) {
       throw new Error("Company not found");
     }
 
-    // Check if company has too many errors in the last 24 hours
-    const shouldSkip = await shouldSkipCompanyDueToErrors(ctx, companyId);
-    if (shouldSkip) {
+    // Check if company should be skipped due to backoff
+    const skipResult = await shouldSkipCompanyDueToBackoff(ctx, companyId);
+    if (skipResult.shouldSkip) {
       return {
         success: false,
-        error: "Company skipped due to too many recent errors",
+        error: `Company skipped: ${skipResult.reason}`,
         skippedDueToErrors: true,
       };
     }
 
     // Schedule the actual scraping work as an internal action
-    await ctx.scheduler.runAfter(0, internal.scraper.fetchAndParseJobs, {
+    const result: {
+      success: boolean;
+      error?: string;
+      atsType?: string;
+      totalFound?: number;
+      newJobsCount?: number;
+      skippedJobsCount?: number;
+      softDeletedCount?: number;
+    } = await ctx.runAction(internal.scraper.fetchAndParseJobs, {
       companyId,
       jobBoardUrl: company.jobBoardUrl,
       sourceType: company.sourceType,
     });
 
-    await ctx.runMutation(api.companies.update, {
-      id: company._id,
-      lastScraped: Date.now(),
-    });
+    // Mark successful scrape and reduce backoff if the scraping was successful
+    if (result.success) {
+      await markSuccessfulScrape(ctx, companyId);
+    }
 
-    return { success: true };
+    return result;
   },
 });
 
@@ -125,6 +194,15 @@ export const fetchAndParseJobs = internalAction({
     jobBoardUrl: v.string(),
     sourceType: createUnionValidator(SOURCE_TYPES),
   },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+    atsType: v.optional(v.string()),
+    totalFound: v.optional(v.number()),
+    newJobsCount: v.optional(v.number()),
+    skippedJobsCount: v.optional(v.number()),
+    softDeletedCount: v.optional(v.number()),
+  }),
   handler: async (ctx, { companyId, jobBoardUrl, sourceType }) => {
     try {
       console.log(`Fetching jobs from: ${jobBoardUrl}`);

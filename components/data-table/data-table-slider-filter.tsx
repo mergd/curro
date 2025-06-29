@@ -1,7 +1,6 @@
 "use client";
 
 import type { Column } from "@tanstack/react-table";
-import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +13,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+
 import { PlusCircleIcon, XCircleIcon } from "@phosphor-icons/react";
+import * as React from "react";
 
 interface Range {
   min: number;
@@ -75,8 +76,8 @@ export function DataTableSliderFilter<TData>({
       rangeSize <= 20
         ? 1
         : rangeSize <= 100
-        ? Math.ceil(rangeSize / 20)
-        : Math.ceil(rangeSize / 50);
+          ? Math.ceil(rangeSize / 20)
+          : Math.ceil(rangeSize / 50);
 
     return { min: minValue, max: maxValue, step };
   }, [column, defaultRange]);
@@ -96,7 +97,7 @@ export function DataTableSliderFilter<TData>({
         column.setFilterValue([numValue, range[1]]);
       }
     },
-    [column, min, range]
+    [column, min, range],
   );
 
   const onToInputChange = React.useCallback(
@@ -106,7 +107,7 @@ export function DataTableSliderFilter<TData>({
         column.setFilterValue([range[0], numValue]);
       }
     },
-    [column, max, range]
+    [column, max, range],
   );
 
   const onSliderValueChange = React.useCallback(
@@ -115,7 +116,7 @@ export function DataTableSliderFilter<TData>({
         column.setFilterValue(value);
       }
     },
-    [column]
+    [column],
   );
 
   const onReset = React.useCallback(
@@ -125,7 +126,7 @@ export function DataTableSliderFilter<TData>({
       }
       column.setFilterValue(undefined);
     },
-    [column]
+    [column],
   );
 
   return (

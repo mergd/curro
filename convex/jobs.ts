@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
+import { COMPENSATION_TYPES } from "./constants";
 
 export const get = query({
   args: { id: v.id("jobs") },
@@ -108,13 +109,17 @@ export const add = mutation({
       }),
     ),
     additionalRequirements: v.optional(v.string()),
-    salaryRange: v.optional(
-      v.object({
-        min: v.optional(v.number()),
-        max: v.optional(v.number()),
-        currency: v.optional(v.string()),
-        period: v.optional(v.union(v.literal("hourly"), v.literal("annual"))),
-      }),
+    compensation: v.optional(
+      v.union(
+        ...COMPENSATION_TYPES.map((type) =>
+          v.object({
+            type: v.literal(type),
+            min: v.optional(v.number()),
+            max: v.optional(v.number()),
+            currency: v.optional(v.string()),
+          }),
+        ),
+      ),
     ),
     remoteOptions: v.optional(
       v.union(v.literal("on-site"), v.literal("remote"), v.literal("hybrid")),
@@ -193,13 +198,17 @@ export const update = mutation({
       }),
     ),
     additionalRequirements: v.optional(v.string()),
-    salaryRange: v.optional(
-      v.object({
-        min: v.optional(v.number()),
-        max: v.optional(v.number()),
-        currency: v.optional(v.string()),
-        period: v.optional(v.union(v.literal("hourly"), v.literal("annual"))),
-      }),
+    compensation: v.optional(
+      v.union(
+        ...COMPENSATION_TYPES.map((type) =>
+          v.object({
+            type: v.literal(type),
+            min: v.optional(v.number()),
+            max: v.optional(v.number()),
+            currency: v.optional(v.string()),
+          }),
+        ),
+      ),
     ),
     remoteOptions: v.optional(
       v.union(v.literal("on-site"), v.literal("remote"), v.literal("hybrid")),

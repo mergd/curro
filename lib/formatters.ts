@@ -37,3 +37,39 @@ export const formatDateRelative = (
     day: "numeric",
   }).format(d);
 };
+
+export const formatSalary = (
+  compensation:
+    | {
+        min?: number;
+        max?: number;
+        currency?: string;
+        type?: string;
+      }
+    | null
+    | undefined,
+) => {
+  if (!compensation) return null;
+
+  const { min, max, currency = "USD", type } = compensation;
+  const symbol = currency === "USD" ? "$" : currency;
+
+  if (min && max) {
+    return `${symbol}${min.toLocaleString()} - ${symbol}${max.toLocaleString()} ${type === "annual" ? "/year" : "/hr"}`;
+  } else if (min) {
+    return `${symbol}${min.toLocaleString()}+ ${type === "annual" ? "/year" : "/hr"}`;
+  }
+  return null;
+};
+
+export const timeAgo = (timestamp: number) => {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return `${Math.floor(days / 30)} months ago`;
+};

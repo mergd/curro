@@ -38,6 +38,8 @@ export default defineSchema({
 
   companies: defineTable({
     name: v.string(),
+    description: v.optional(v.string()), // Short 2 sentence description
+    foundedYear: v.optional(v.number()),
     website: v.optional(v.string()),
     logoUrl: v.optional(v.string()),
     jobBoardUrl: v.string(),
@@ -75,6 +77,17 @@ export default defineSchema({
           url: v.optional(v.string()), // URL that caused the error
         }),
       ),
+    ),
+
+    // Backoff tracking for intelligent error handling
+    backoffInfo: v.optional(
+      v.object({
+        level: v.number(), // Current backoff level (0 = no backoff, higher = longer delays)
+        nextAllowedScrape: v.number(), // Timestamp when next scrape is allowed
+        consecutiveFailures: v.number(), // Number of consecutive failures
+        lastSuccessfulScrape: v.optional(v.number()), // Timestamp of last successful scrape
+        totalFailures: v.number(), // Total failures in current backoff period
+      }),
     ),
   }).index("by_name", ["name"]),
 

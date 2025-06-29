@@ -1,6 +1,6 @@
 // Client-side company utilities
 
-const SOURCE_TYPES = ["ashby", "greenhouse", "other"] as const;
+import { SOURCE_TYPES } from "../constants";
 
 /**
  * Helper to infer the applicant tracking system provider from a URL.

@@ -21,6 +21,7 @@ interface User {
 
 ```tsx
 import type { ColumnDef } from "@tanstack/react-table";
+
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 
 export const columns: ColumnDef<User>[] = [
@@ -84,9 +85,9 @@ export const columns: ColumnDef<User>[] = [
 ### 3. Setup the Data Table
 
 ```tsx
-import { useDataTable } from "@/hooks/use-data-table";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
+import { useDataTable } from "@/hooks/use-data-table";
 
 export function UsersTable() {
   const { data: users = [] } = api.users.list.useQuery();
@@ -118,6 +119,7 @@ export function UsersTable() {
 The data table supports various filter types through the `meta.variant` property:
 
 ### Text Filter
+
 ```tsx
 meta: {
   variant: "text",
@@ -126,6 +128,7 @@ meta: {
 ```
 
 ### Select Filter
+
 ```tsx
 meta: {
   variant: "select",
@@ -137,6 +140,7 @@ meta: {
 ```
 
 ### Multi-Select Filter
+
 ```tsx
 meta: {
   variant: "multiSelect",
@@ -149,6 +153,7 @@ meta: {
 ```
 
 ### Date Range Filter
+
 ```tsx
 meta: {
   variant: "dateRange",
@@ -157,6 +162,7 @@ meta: {
 ```
 
 ### Number Filter
+
 ```tsx
 meta: {
   variant: "number",
@@ -166,6 +172,7 @@ meta: {
 ```
 
 ### Range Slider Filter
+
 ```tsx
 meta: {
   variant: "range",
@@ -263,17 +270,17 @@ const selectedRows = table.getFilteredSelectedRowModel().rows;
 
 ```tsx
 const { table } = useDataTable({
-  data: users,                    // Your data array
-  columns,                        // Column definitions
-  pageCount: -1,                  // Total pages (-1 for client-side)
+  data: users, // Your data array
+  columns, // Column definitions
+  pageCount: -1, // Total pages (-1 for client-side)
   initialState: {
     sorting: [{ id: "name", desc: false }],
     pagination: { pageIndex: 0, pageSize: 10 },
     columnVisibility: { id: false }, // Hide ID column
   },
-  enableRowSelection: true,       // Enable row selection
-  enableAdvancedFilter: false,    // Use simple filters
-  debounceMs: 300,               // Filter debounce delay
+  enableRowSelection: true, // Enable row selection
+  enableAdvancedFilter: false, // Use simple filters
+  debounceMs: 300, // Filter debounce delay
 });
 ```
 
@@ -281,10 +288,10 @@ const { table } = useDataTable({
 
 ```tsx
 // Client-side pagination (default)
-pageCount: Math.ceil(data.length / pageSize)
+pageCount: Math.ceil(data.length / pageSize);
 
 // Server-side pagination
-pageCount: totalPages // from your API
+pageCount: totalPages; // from your API
 ```
 
 ## Styling and Customization
@@ -309,7 +316,7 @@ const { table } = useDataTable({
   initialState: {
     columnPinning: {
       left: ["select", "name"], // Pin to left
-      right: ["actions"],       // Pin to right
+      right: ["actions"], // Pin to right
     },
   },
 });
@@ -348,6 +355,7 @@ The data table uses CSS variables that can be customized:
 ## Examples
 
 Check out these examples in the codebase:
+
 - `src/app/(app)/contacts/page.tsx` - Contacts table with all features
 - `src/app/[locale]/(app)/dashboard/transfer-table.tsx` - Transaction history table
-- `src/app/[locale]/(app)/transfer/page.tsx` - Transfer management table 
+- `src/app/[locale]/(app)/transfer/page.tsx` - Transfer management table

@@ -1,9 +1,11 @@
 "use client";
 
-import type { Id } from "../../../convex/_generated/dataModel";
+import type { Id } from "@/convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CompanyLogo } from "@/components/ui/company-logo";
+import { formatSalary, timeAgo } from "@/lib/formatters";
 
 import {
   ArrowLeftIcon,
@@ -18,13 +20,14 @@ import Link from "next/link";
 import { api } from "../../../convex/_generated/api";
 
 interface JobDetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
-export default function JobDetailPage({ params }: JobDetailPageProps) {
-  const job = useQuery(api.jobs.get, { id: params.id as Id<"jobs"> });
+export default async function JobDetailPage({ params }: JobDetailPageProps) {
+  const { id } = await params;
+  const job = useQuery(api.jobs.get, { id: id as Id<"jobs"> });
 
   if (!job) {
     return (
@@ -40,32 +43,6 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
       </div>
     );
   }
-
-  const formatSalary = (compensation: typeof job.compensation) => {
-    if (!compensation) return null;
-
-    const { min, max, currency = "USD", type } = compensation;
-    const symbol = currency === "USD" ? "$" : currency;
-
-    if (min && max) {
-      return `${symbol}${min.toLocaleString()} - ${symbol}${max.toLocaleString()} ${type === "annual" ? "/year" : "/hr"}`;
-    } else if (min) {
-      return `${symbol}${min.toLocaleString()}+ ${type === "annual" ? "/year" : "/hr"}`;
-    }
-    return null;
-  };
-
-  const timeAgo = (timestamp: number) => {
-    const now = Date.now();
-    const diff = now - timestamp;
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-    if (days === 0) return "Today";
-    if (days === 1) return "Yesterday";
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
-    return `${Math.floor(days / 30)} months ago`;
-  };
 
   return (
     <div className="p-6">
@@ -102,13 +79,11 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                   )}
                 </div>
               </div>
-              {job.company?.logoUrl && (
-                <img
-                  src={job.company.logoUrl}
-                  alt={`${job.company.name} logo`}
-                  className="size-16 rounded-lg object-cover"
-                />
-              )}
+              <CompanyLogo
+                logoUrl={job.company?.logoUrl}
+                companyName={job.company?.name || "Unknown Company"}
+                size="lg"
+              />
             </div>
 
             {/* Job Meta */}

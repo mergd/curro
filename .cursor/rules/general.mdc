@@ -10,3 +10,9 @@ When starting off, run `pnpm run auth:setup` to setup jwt.
 If the app is not related to blogging, feel free to remove a lot of the code related to mdx and the blog.
 
 Remove the boilerplate around the notes logic - that's only there as examples.
+
+When importing convex - use @/ instead of a long relative path.
+
+For pageProps with dynamic routes - this is next 15, so make sure to mark these as a promise
+
+Make sure to have a good skeleton.

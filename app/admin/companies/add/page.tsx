@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form";
 import { ImagePreview } from "@/components/ui/image-preview";
 import { Input } from "@/components/ui/input";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TagCombobox } from "@/components/ui/tag-combobox";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 import {
   COMPANY_CATEGORIES,
@@ -43,6 +45,8 @@ import { z } from "zod";
 
 const formSchema = z.object({
   name: z.string().min(1, "Company name is required"),
+  description: z.string().optional().or(z.literal("")),
+  foundedYear: z.string().optional().or(z.literal("")),
   website: z
     .string()
     .url("Please enter a valid URL")
@@ -56,21 +60,7 @@ const formSchema = z.object({
   jobBoardUrl: z.string().url("Please enter a valid job board URL"),
   sourceType: z.enum(["ashby", "greenhouse", "other"]).optional(),
   numberOfEmployees: z.string().optional(),
-  stage: z
-    .enum([
-      "pre-seed",
-      "seed",
-      "series-a",
-      "series-b",
-      "series-c",
-      "series-d",
-      "series-e",
-      "growth",
-      "pre-ipo",
-      "public",
-      "acquired",
-    ])
-    .optional(),
+  stage: z.enum(COMPANY_STAGES).optional(),
   category: z.array(z.string()).optional(),
   subcategory: z.array(z.string()).optional(),
   tags: z.array(z.string()).optional(),
@@ -94,6 +84,8 @@ export default function AddCompanyPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
+      description: "",
+      foundedYear: "",
       website: "",
       logoUrl: "",
       jobBoardUrl: "",
@@ -115,9 +107,37 @@ export default function AddCompanyPage() {
   const jobBoardUrl = form.watch("jobBoardUrl");
   const logoUrl = form.watch("logoUrl");
   const selectedCategories = form.watch("category") || [];
+  const financingAmount = form.watch("recentFinancingAmount");
 
   // Check if prefill should be shown (name and website are filled)
   const canShowPrefill = companyName.trim() && website?.trim();
+
+  // Format financing amount for display
+  const formatFinancingAmount = (value: string): string => {
+    if (!value) return value;
+
+    // Remove any existing formatting
+    const cleanValue = value.replace(/[,$\s]/g, "");
+
+    // Handle abbreviations
+    const lowerValue = cleanValue.toLowerCase();
+    let numValue = parseFloat(cleanValue);
+
+    if (lowerValue.includes("m")) {
+      numValue = parseFloat(cleanValue.replace(/[^0-9.]/g, "")) * 1000000;
+    } else if (lowerValue.includes("b")) {
+      numValue = parseFloat(cleanValue.replace(/[^0-9.]/g, "")) * 1000000000;
+    } else if (lowerValue.includes("k")) {
+      numValue = parseFloat(cleanValue.replace(/[^0-9.]/g, "")) * 1000;
+    }
+
+    // Format with commas
+    if (!isNaN(numValue)) {
+      return numValue.toLocaleString();
+    }
+
+    return value;
+  };
 
   // Auto-infer sourceType when jobBoardUrl changes
   useEffect(() => {
@@ -128,6 +148,14 @@ export default function AddCompanyPage() {
       }
     }
   }, [jobBoardUrl, form]);
+
+  // Auto-format financing amount on blur
+  const handleFinancingAmountBlur = (value: string) => {
+    const formatted = formatFinancingAmount(value);
+    if (formatted !== value) {
+      form.setValue("recentFinancingAmount", formatted);
+    }
+  };
 
   const handleAutoFill = async () => {
     if (!companyName.trim()) {
@@ -143,6 +171,12 @@ export default function AddCompanyPage() {
       });
 
       // Fill in the form with the fetched details
+      if (details.description) {
+        form.setValue("description", details.description);
+      }
+      if (details.foundedYear) {
+        form.setValue("foundedYear", details.foundedYear.toString());
+      }
       if (details.website) {
         form.setValue("website", details.website);
       }
@@ -163,13 +197,21 @@ export default function AddCompanyPage() {
       }
       if (details.recentFinancing) {
         if (details.recentFinancing.amount) {
-          form.setValue(
-            "recentFinancingAmount",
-            details.recentFinancing.amount.toString(),
-          );
+          // Format the amount properly
+          const formattedAmount =
+            details.recentFinancing.amount.toLocaleString();
+          form.setValue("recentFinancingAmount", formattedAmount);
         }
         if (details.recentFinancing.date) {
-          form.setValue("recentFinancingDate", details.recentFinancing.date);
+          // Convert date to YYYY-MM format if needed
+          const dateValue = details.recentFinancing.date;
+          if (dateValue.includes("-") && dateValue.length > 7) {
+            // If it's a full date (YYYY-MM-DD), extract just YYYY-MM
+            const yearMonth = dateValue.substring(0, 7);
+            form.setValue("recentFinancingDate", yearMonth);
+          } else {
+            form.setValue("recentFinancingDate", dateValue);
+          }
         }
       }
       if (details.investors && details.investors.length > 0) {
@@ -179,7 +221,29 @@ export default function AddCompanyPage() {
       toast.success("Company details auto-filled successfully!");
     } catch (error) {
       console.error("Error auto-filling company details:", error);
-      toast.error("Failed to auto-fill company details. Please try again.");
+
+      // More specific error messages
+      if (error instanceof Error) {
+        if (
+          error.message.includes("No object generated") ||
+          error.message.includes("Type validation failed")
+        ) {
+          toast.error(
+            "AI couldn't parse company information properly. Please try again or fill manually.",
+          );
+        } else if (
+          error.message.includes("network") ||
+          error.message.includes("fetch")
+        ) {
+          toast.error(
+            "Network error while fetching company details. Please check your connection and try again.",
+          );
+        } else {
+          toast.error(`Failed to auto-fill: ${error.message}`);
+        }
+      } else {
+        toast.error("Failed to auto-fill company details. Please try again.");
+      }
     } finally {
       setIsAutoFilling(false);
     }
@@ -202,27 +266,32 @@ export default function AddCompanyPage() {
       // Parse and format the financing amount
       let recentFinancing = undefined;
       if (data.recentFinancingAmount && data.recentFinancingDate) {
-        // Remove currency symbols and parse the number
+        // Remove currency symbols and commas, parse the number
         const cleanAmount = data.recentFinancingAmount.replace(/[$,\s]/g, "");
         let amount = parseFloat(cleanAmount);
 
         // Handle common abbreviations (M for million, B for billion, K for thousand)
         if (cleanAmount.toLowerCase().includes("m")) {
-          amount = amount * 1000000;
+          amount = parseFloat(cleanAmount.replace(/[^0-9.]/g, "")) * 1000000;
         } else if (cleanAmount.toLowerCase().includes("b")) {
-          amount = amount * 1000000000;
+          amount = parseFloat(cleanAmount.replace(/[^0-9.]/g, "")) * 1000000000;
         } else if (cleanAmount.toLowerCase().includes("k")) {
-          amount = amount * 1000;
+          amount = parseFloat(cleanAmount.replace(/[^0-9.]/g, "")) * 1000;
         }
 
         recentFinancing = {
           amount: amount,
-          date: data.recentFinancingDate,
+          date: data.recentFinancingDate, // Already in YYYY-MM format from MonthYearPicker
         };
       }
 
       const companyData = {
         name: data.name,
+        description: data.description || undefined,
+        foundedYear:
+          data.foundedYear && data.foundedYear.trim()
+            ? parseInt(data.foundedYear, 10)
+            : undefined,
         website: data.website || undefined,
         logoUrl: data.logoUrl || undefined,
         jobBoardUrl: data.jobBoardUrl,
@@ -286,7 +355,6 @@ export default function AddCompanyPage() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="website"
@@ -345,6 +413,23 @@ export default function AddCompanyPage() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="A brief description of what the company does..."
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <FormField
@@ -363,12 +448,18 @@ export default function AddCompanyPage() {
                       </FormItem>
                     )}
                   />
+                </div>
 
+                <div
+                  className={`grid gap-4 ${jobBoardUrl?.trim() ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"}`}
+                >
                   <FormField
                     control={form.control}
                     name="jobBoardUrl"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem
+                        className={jobBoardUrl?.trim() ? "md:col-span-2" : ""}
+                      >
                         <FormLabel required>Job Board URL</FormLabel>
                         <FormControl>
                           <Input
@@ -380,6 +471,36 @@ export default function AddCompanyPage() {
                       </FormItem>
                     )}
                   />
+
+                  {jobBoardUrl?.trim() && (
+                    <FormField
+                      control={form.control}
+                      name="sourceType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ATS Type</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Auto-detected" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {SOURCE_TYPES.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
               </div>
 
@@ -387,34 +508,6 @@ export default function AddCompanyPage() {
                 {/* Company Details */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Company Details</h3>
-
-                  <FormField
-                    control={form.control}
-                    name="sourceType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>ATS Type</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select ATS type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {SOURCE_TYPES.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type.charAt(0).toUpperCase() + type.slice(1)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
                   <FormField
                     control={form.control}
@@ -468,6 +561,26 @@ export default function AddCompanyPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="foundedYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Founded Year</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="2010"
+                            type="number"
+                            min="1990"
+                            max={new Date().getFullYear()}
+                            {...field}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -567,18 +680,28 @@ export default function AddCompanyPage() {
                           <TagCombobox
                             options={[
                               {
-                                label: "San Francisco",
-                                value: "san-francisco",
+                                label: "San Francisco, USA",
+                                value: "San Francisco, USA",
                               },
-                              { label: "New York", value: "new-york" },
-                              { label: "London", value: "london" },
-                              { label: "Remote", value: "remote" },
-                              { label: "Los Angeles", value: "los-angeles" },
-                              { label: "Chicago", value: "chicago" },
-                              { label: "Boston", value: "boston" },
-                              { label: "Seattle", value: "seattle" },
-                              { label: "Austin", value: "austin" },
-                              { label: "Toronto", value: "toronto" },
+                              {
+                                label: "New York, USA",
+                                value: "New York, USA",
+                              },
+                              { label: "London, GBR", value: "London, GBR" },
+                              { label: "Remote", value: "Remote" },
+                              {
+                                label: "Los Angeles, USA",
+                                value: "Los Angeles, USA",
+                              },
+                              { label: "Chicago, USA", value: "Chicago, USA" },
+                              { label: "Boston, USA", value: "Boston, USA" },
+                              { label: "Seattle, USA", value: "Seattle, USA" },
+                              { label: "Austin, USA", value: "Austin, USA" },
+                              { label: "Toronto, CAN", value: "Toronto, CAN" },
+                              {
+                                label: "Singapore, SGP",
+                                value: "Singapore, SGP",
+                              },
                             ]}
                             value={field.value}
                             onValueChange={field.onChange}
@@ -602,24 +725,61 @@ export default function AddCompanyPage() {
                             options={[
                               {
                                 label: "Sequoia Capital",
-                                value: "sequoia-capital",
+                                value: "Sequoia Capital",
                               },
                               {
                                 label: "Andreessen Horowitz",
-                                value: "andreessen-horowitz",
+                                value: "Andreessen Horowitz",
                               },
-                              { label: "Y Combinator", value: "y-combinator" },
-                              { label: "Accel", value: "accel" },
+                              { label: "Y Combinator", value: "Y Combinator" },
+                              { label: "Accel", value: "Accel" },
                               {
                                 label: "Greylock Partners",
-                                value: "greylock-partners",
+                                value: "Greylock Partners",
                               },
                               {
                                 label: "Kleiner Perkins",
-                                value: "kleiner-perkins",
+                                value: "Kleiner Perkins",
                               },
-                              { label: "NEA", value: "nea" },
-                              { label: "Benchmark", value: "benchmark" },
+                              { label: "NEA", value: "NEA" },
+                              { label: "Benchmark", value: "Benchmark" },
+                              {
+                                label: "General Catalyst",
+                                value: "General Catalyst",
+                              },
+                              {
+                                label: "Bessemer Venture Partners",
+                                value: "Bessemer Venture Partners",
+                              },
+                              {
+                                label: "First Round Capital",
+                                value: "First Round Capital",
+                              },
+                              {
+                                label: "Founders Fund",
+                                value: "Founders Fund",
+                              },
+                              { label: "GV", value: "GV" },
+                              {
+                                label: "Intel Capital",
+                                value: "Intel Capital",
+                              },
+                              {
+                                label: "Khosla Ventures",
+                                value: "Khosla Ventures",
+                              },
+                              {
+                                label: "Lightspeed Venture Partners",
+                                value: "Lightspeed Venture Partners",
+                              },
+                              {
+                                label: "Redpoint Ventures",
+                                value: "Redpoint Ventures",
+                              },
+                              {
+                                label: "Union Square Ventures",
+                                value: "Union Square Ventures",
+                              },
                             ]}
                             value={field.value}
                             onValueChange={field.onChange}
@@ -644,7 +804,13 @@ export default function AddCompanyPage() {
                       <FormItem>
                         <FormLabel>Recent Financing Amount (USD)</FormLabel>
                         <FormControl>
-                          <Input placeholder="10M" {...field} />
+                          <Input
+                            placeholder="10M or 10,000,000"
+                            {...field}
+                            onBlur={(e) =>
+                              handleFinancingAmountBlur(e.target.value)
+                            }
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -658,7 +824,11 @@ export default function AddCompanyPage() {
                       <FormItem>
                         <FormLabel>Recent Financing Date</FormLabel>
                         <FormControl>
-                          <Input placeholder="2024-01-15" {...field} />
+                          <MonthYearPicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select month and year"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -7,7 +7,7 @@ export interface ATSAdapter {
   extractJobLinks(html: string, baseUrl: string): string[];
 }
 
-export type ATSType = "ashby" | "greenhouse" | "lever" | "workday" | "other";
+export type ATSType = "ashby" | "greenhouse" | "other";
 
 export interface ScrapingResult {
   links: string[];

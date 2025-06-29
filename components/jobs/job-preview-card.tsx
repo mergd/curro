@@ -1,6 +1,7 @@
 import type { Doc } from "../../convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
+import { CompanyLogo } from "@/components/ui/company-logo";
 
 import { ClockIcon, GlobeIcon } from "@radix-ui/react-icons";
 import { Card } from "@radix-ui/themes";
@@ -55,13 +56,11 @@ export function JobPreviewCard({ job }: JobPreviewCardProps) {
                 {job.company?.name || "Unknown Company"}
               </p>
             </div>
-            {job.company?.logoUrl && (
-              <img
-                src={job.company.logoUrl}
-                alt={`${job.company.name} logo`}
-                className="size-12 rounded-lg object-cover"
-              />
-            )}
+            <CompanyLogo
+              logoUrl={job.company?.logoUrl}
+              companyName={job.company?.name || "Unknown Company"}
+              size="md"
+            />
           </div>
 
           {/* Details */}

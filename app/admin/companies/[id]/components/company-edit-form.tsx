@@ -1,43 +1,78 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { ImagePreview } from "@/components/ui/image-preview";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TagCombobox } from "@/components/ui/tag-combobox";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
+import {
+  COMPANY_CATEGORIES,
+  COMPANY_STAGES,
+  COMPANY_SUBCATEGORIES,
+  COMPANY_TAGS,
+  EMPLOYEE_COUNT_RANGES,
+  SOURCE_TYPES,
+} from "@/lib/constants";
+import { inferSourceType } from "@/lib/utils/company";
 
-import { ArrowLeftIcon } from "@radix-ui/react-icons";
-import { Card, Select } from "@radix-ui/themes";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeftIcon } from "@phosphor-icons/react";
 import { useMutation } from "convex/react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+
+const formSchema = z.object({
+  name: z.string().min(1, "Company name is required"),
+  description: z.string().optional().or(z.literal("")),
+  foundedYear: z.string().optional().or(z.literal("")),
+  website: z
+    .string()
+    .url("Please enter a valid URL")
+    .optional()
+    .or(z.literal("")),
+  logoUrl: z
+    .string()
+    .url("Please enter a valid URL")
+    .optional()
+    .or(z.literal("")),
+  jobBoardUrl: z.string().url("Please enter a valid job board URL"),
+  sourceType: z.enum(["ashby", "greenhouse", "other"]).optional(),
+  numberOfEmployees: z.string().optional(),
+  stage: z.enum(COMPANY_STAGES).optional(),
+  category: z.array(z.string()).optional(),
+  subcategory: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  locations: z.array(z.string()).optional(),
+  recentFinancingAmount: z.string().optional(),
+  recentFinancingDate: z.string().optional(),
+  investors: z.array(z.string()).optional(),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 interface CompanyEditFormProps {
   company: any;
   onCancel: () => void;
   onSaved: () => void;
-}
-
-interface CompanyFormData {
-  name: string;
-  website?: string;
-  logoUrl?: string;
-  jobBoardUrl: string;
-  sourceType: "ashby" | "greenhouse" | "other";
-  numberOfEmployees?: string;
-  stage?:
-    | "pre-seed"
-    | "seed"
-    | "series-a"
-    | "series-b"
-    | "series-c"
-    | "series-d"
-    | "series-e"
-    | "growth"
-    | "pre-ipo"
-    | "public"
-    | "acquired";
-  tags?: string[];
-  locations?: string[];
 }
 
 export function CompanyEditForm({
@@ -47,210 +82,664 @@ export function CompanyEditForm({
 }: CompanyEditFormProps) {
   const updateCompany = useMutation(api.companies.update);
 
-  const form = useForm<CompanyFormData>({
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: company.name || "",
+      description: company.description || "",
+      foundedYear: company.foundedYear?.toString() || "",
       website: company.website || "",
       logoUrl: company.logoUrl || "",
       jobBoardUrl: company.jobBoardUrl || "",
       sourceType: company.sourceType || "other",
       numberOfEmployees: company.numberOfEmployees || "",
       stage: company.stage || "",
+      category: company.category || [],
+      subcategory: company.subcategory || [],
       tags: company.tags || [],
       locations: company.locations || [],
+      recentFinancingAmount: company.recentFinancing?.amount
+        ? company.recentFinancing.amount.toLocaleString()
+        : "",
+      recentFinancingDate: company.recentFinancing?.date || "",
+      investors: company.investors || [],
     },
   });
 
-  const onSubmit = async (data: CompanyFormData) => {
+  const companyName = form.watch("name");
+  const jobBoardUrl = form.watch("jobBoardUrl");
+  const logoUrl = form.watch("logoUrl");
+  const selectedCategories = form.watch("category") || [];
+  const financingAmount = form.watch("recentFinancingAmount");
+
+  // Format financing amount for display
+  const formatFinancingAmount = (value: string): string => {
+    if (!value) return value;
+
+    // Remove any existing formatting
+    const cleanValue = value.replace(/[,$\s]/g, "");
+
+    // Handle abbreviations
+    const lowerValue = cleanValue.toLowerCase();
+    let numValue = parseFloat(cleanValue);
+
+    if (lowerValue.includes("m")) {
+      numValue = parseFloat(cleanValue.replace(/[^0-9.]/g, "")) * 1000000;
+    } else if (lowerValue.includes("b")) {
+      numValue = parseFloat(cleanValue.replace(/[^0-9.]/g, "")) * 1000000000;
+    } else if (lowerValue.includes("k")) {
+      numValue = parseFloat(cleanValue.replace(/[^0-9.]/g, "")) * 1000;
+    }
+
+    // Format with commas
+    if (!isNaN(numValue)) {
+      return numValue.toLocaleString();
+    }
+
+    return value;
+  };
+
+  // Auto-infer sourceType when jobBoardUrl changes
+  useEffect(() => {
+    if (jobBoardUrl && jobBoardUrl.trim()) {
+      const inferredType = inferSourceType(jobBoardUrl);
+      if (form.getValues("sourceType") !== inferredType) {
+        form.setValue("sourceType", inferredType);
+      }
+    }
+  }, [jobBoardUrl, form]);
+
+  // Auto-format financing amount on blur
+  const handleFinancingAmountBlur = (value: string) => {
+    const formatted = formatFinancingAmount(value);
+    if (formatted !== value) {
+      form.setValue("recentFinancingAmount", formatted);
+    }
+  };
+
+  // Get available subcategories based on selected categories
+  const availableSubcategories = selectedCategories.flatMap((category) => {
+    const subcats =
+      COMPANY_SUBCATEGORIES[category as keyof typeof COMPANY_SUBCATEGORIES];
+    return subcats
+      ? subcats.map((sub) => ({
+          label: sub.charAt(0).toUpperCase() + sub.slice(1).replace(/-/g, " "),
+          value: sub,
+        }))
+      : [];
+  });
+
+  const onSubmit = async (data: FormData) => {
     try {
-      await updateCompany({
+      // Parse and format the financing amount
+      let recentFinancing = undefined;
+      if (data.recentFinancingAmount && data.recentFinancingDate) {
+        // Remove currency symbols and commas, parse the number
+        const cleanAmount = data.recentFinancingAmount.replace(/[$,\s]/g, "");
+        let amount = parseFloat(cleanAmount);
+
+        // Handle common abbreviations (M for million, B for billion, K for thousand)
+        if (cleanAmount.toLowerCase().includes("m")) {
+          amount = parseFloat(cleanAmount.replace(/[^0-9.]/g, "")) * 1000000;
+        } else if (cleanAmount.toLowerCase().includes("b")) {
+          amount = parseFloat(cleanAmount.replace(/[^0-9.]/g, "")) * 1000000000;
+        } else if (cleanAmount.toLowerCase().includes("k")) {
+          amount = parseFloat(cleanAmount.replace(/[^0-9.]/g, "")) * 1000;
+        }
+
+        recentFinancing = {
+          amount: amount,
+          date: data.recentFinancingDate,
+        };
+      }
+
+      const companyData = {
         id: company._id,
-        ...data,
-        tags: data.tags?.filter((tag) => tag.trim() !== ""),
-        locations: data.locations?.filter((loc) => loc.trim() !== ""),
-      });
+        name: data.name,
+        description: data.description || undefined,
+        foundedYear:
+          data.foundedYear && data.foundedYear.trim()
+            ? parseInt(data.foundedYear, 10)
+            : undefined,
+        website: data.website || undefined,
+        logoUrl: data.logoUrl || undefined,
+        jobBoardUrl: data.jobBoardUrl,
+        sourceType: data.sourceType,
+        numberOfEmployees: data.numberOfEmployees,
+        stage: data.stage,
+        category: data.category?.length ? data.category : undefined,
+        subcategory: data.subcategory?.length ? data.subcategory : undefined,
+        tags: data.tags?.length ? data.tags : undefined,
+        locations: data.locations?.length ? data.locations : undefined,
+        recentFinancing,
+        investors: data.investors?.length ? data.investors : undefined,
+      };
+
+      await updateCompany(companyData);
+      toast.success("Company updated successfully!");
       onSaved();
     } catch (error) {
       console.error("Failed to update company:", error);
+      toast.error("Failed to update company. Please try again.");
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container max-w-4xl mx-auto py-8 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={onCancel} className="cursor-pointer">
-            <ArrowLeftIcon className="size-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Edit {company.name}</h1>
-            <p className="text-muted-foreground">Update company information</p>
-          </div>
+      <div className="flex items-center gap-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onCancel}
+          className="cursor-pointer"
+        >
+          <ArrowLeftIcon className="size-4 mr-2" />
+          Back
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Edit {company.name}</h1>
+          <p className="text-muted-foreground">
+            Update company information and details.
+          </p>
         </div>
       </div>
 
-      <Card className="p-6">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Basic Information */}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Basic Information */}
+            <div className="lg:col-span-3 space-y-6">
               <div className="space-y-4">
-                <h3 className="text-lg font-medium">Basic Information</h3>
+                <h2 className="text-xl font-semibold">Basic Information</h2>
 
-                <div className="space-y-2">
-                  <Label htmlFor="name">Company Name *</Label>
-                  <Input
-                    id="name"
-                    {...form.register("name", { required: true })}
-                    placeholder="Acme Inc."
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel required>Company Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Acme Inc." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Website</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://acme.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    {...form.register("website")}
-                    placeholder="https://acme.com"
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="A brief description of what the company does..."
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="logoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Logo URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://acme.com/logo.png"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="logoUrl">Logo URL</Label>
-                  <Input
-                    id="logoUrl"
-                    {...form.register("logoUrl")}
-                    placeholder="https://acme.com/logo.png"
+                <div
+                  className={`grid gap-4 ${jobBoardUrl?.trim() ? "grid-cols-1 md:grid-cols-3" : "grid-cols-1"}`}
+                >
+                  <FormField
+                    control={form.control}
+                    name="jobBoardUrl"
+                    render={({ field }) => (
+                      <FormItem
+                        className={jobBoardUrl?.trim() ? "md:col-span-2" : ""}
+                      >
+                        <FormLabel required>Job Board URL</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="https://jobs.acme.com"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {jobBoardUrl?.trim() && (
+                    <FormField
+                      control={form.control}
+                      name="sourceType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>ATS Type</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Auto-detected" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {SOURCE_TYPES.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Company Details */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Company Details</h3>
+
+                  <FormField
+                    control={form.control}
+                    name="numberOfEmployees"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Number of Employees</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select company size" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {EMPLOYEE_COUNT_RANGES.map((range) => (
+                              <SelectItem key={range} value={range}>
+                                {range}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="stage"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Company Stage</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select company stage" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {COMPANY_STAGES.map((stage) => (
+                              <SelectItem key={stage} value={stage}>
+                                {stage.charAt(0).toUpperCase() +
+                                  stage.slice(1).replace(/-/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="foundedYear"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Founded Year</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="2010"
+                            type="number"
+                            min="1990"
+                            max={new Date().getFullYear()}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="jobBoardUrl">Job Board URL *</Label>
-                  <Input
-                    id="jobBoardUrl"
-                    {...form.register("jobBoardUrl", { required: true })}
-                    placeholder="https://jobs.acme.com"
+                {/* Classification */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Classification</h3>
+
+                  <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Categories</FormLabel>
+                        <FormControl>
+                          <TagCombobox
+                            options={COMPANY_CATEGORIES.map((cat) => ({
+                              label:
+                                cat.charAt(0).toUpperCase() +
+                                cat.slice(1).replace(/-/g, " "),
+                              value: cat,
+                            }))}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Add categories..."
+                            allowCustom={false}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {availableSubcategories.length > 0 && (
+                    <FormField
+                      control={form.control}
+                      name="subcategory"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Subcategories</FormLabel>
+                          <FormControl>
+                            <TagCombobox
+                              options={availableSubcategories}
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              placeholder="Add subcategories..."
+                              allowCustom={true}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tags</FormLabel>
+                        <FormControl>
+                          <TagCombobox
+                            options={COMPANY_TAGS.map((tag) => ({
+                              label:
+                                tag.charAt(0).toUpperCase() +
+                                tag.slice(1).replace(/-/g, " "),
+                              value: tag,
+                            }))}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Add tags..."
+                            allowCustom={true}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
               </div>
 
-              {/* Company Details */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Company Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Location & Funding */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Location & Funding</h3>
 
-                <div className="space-y-2">
-                  <Label htmlFor="sourceType">ATS Type</Label>
-                  <Select.Root
-                    value={form.watch("sourceType")}
-                    onValueChange={(value) =>
-                      form.setValue("sourceType", value as any)
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
-                      <Select.Item value="ashby">Ashby</Select.Item>
-                      <Select.Item value="greenhouse">Greenhouse</Select.Item>
-                      <Select.Item value="other">Other</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
+                  <FormField
+                    control={form.control}
+                    name="locations"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Locations</FormLabel>
+                        <FormControl>
+                          <TagCombobox
+                            options={[
+                              {
+                                label: "San Francisco, USA",
+                                value: "San Francisco, USA",
+                              },
+                              {
+                                label: "New York, USA",
+                                value: "New York, USA",
+                              },
+                              { label: "London, GBR", value: "London, GBR" },
+                              { label: "Remote", value: "Remote" },
+                              {
+                                label: "Los Angeles, USA",
+                                value: "Los Angeles, USA",
+                              },
+                              { label: "Chicago, USA", value: "Chicago, USA" },
+                              { label: "Boston, USA", value: "Boston, USA" },
+                              { label: "Seattle, USA", value: "Seattle, USA" },
+                              { label: "Austin, USA", value: "Austin, USA" },
+                              { label: "Toronto, CAN", value: "Toronto, CAN" },
+                              {
+                                label: "Singapore, SGP",
+                                value: "Singapore, SGP",
+                              },
+                            ]}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Add locations..."
+                            allowCustom={true}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className="space-y-2">
-                  <Label htmlFor="numberOfEmployees">Number of Employees</Label>
-                  <Select.Root
-                    value={form.watch("numberOfEmployees") || ""}
-                    onValueChange={(value) =>
-                      form.setValue("numberOfEmployees", value)
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
-                      <Select.Item value="1-10">1-10</Select.Item>
-                      <Select.Item value="11-50">11-50</Select.Item>
-                      <Select.Item value="51-200">51-200</Select.Item>
-                      <Select.Item value="201-500">201-500</Select.Item>
-                      <Select.Item value="501-1000">501-1000</Select.Item>
-                      <Select.Item value="1001-5000">1001-5000</Select.Item>
-                      <Select.Item value="5000+">5000+</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="stage">Company Stage</Label>
-                  <Select.Root
-                    value={form.watch("stage") || ""}
-                    onValueChange={(value) =>
-                      form.setValue("stage", value as any)
-                    }
-                  >
-                    <Select.Trigger />
-                    <Select.Content>
-                      <Select.Item value="pre-seed">Pre-seed</Select.Item>
-                      <Select.Item value="seed">Seed</Select.Item>
-                      <Select.Item value="series-a">Series A</Select.Item>
-                      <Select.Item value="series-b">Series B</Select.Item>
-                      <Select.Item value="series-c">Series C</Select.Item>
-                      <Select.Item value="series-d">Series D</Select.Item>
-                      <Select.Item value="series-e">Series E</Select.Item>
-                      <Select.Item value="growth">Growth</Select.Item>
-                      <Select.Item value="pre-ipo">Pre-IPO</Select.Item>
-                      <Select.Item value="public">Public</Select.Item>
-                      <Select.Item value="acquired">Acquired</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tags">Tags (comma separated)</Label>
-                  <Input
-                    id="tags"
-                    value={form.watch("tags")?.join(", ") || ""}
-                    onChange={(e) => {
-                      const tags = e.target.value
-                        .split(",")
-                        .map((tag) => tag.trim());
-                      form.setValue("tags", tags);
-                    }}
-                    placeholder="fintech, saas, b2b, ai/ml"
+                  <FormField
+                    control={form.control}
+                    name="investors"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Investors</FormLabel>
+                        <FormControl>
+                          <TagCombobox
+                            options={[
+                              {
+                                label: "Sequoia Capital",
+                                value: "Sequoia Capital",
+                              },
+                              {
+                                label: "Andreessen Horowitz",
+                                value: "Andreessen Horowitz",
+                              },
+                              { label: "Y Combinator", value: "Y Combinator" },
+                              { label: "Accel", value: "Accel" },
+                              {
+                                label: "Greylock Partners",
+                                value: "Greylock Partners",
+                              },
+                              {
+                                label: "Kleiner Perkins",
+                                value: "Kleiner Perkins",
+                              },
+                              { label: "NEA", value: "NEA" },
+                              { label: "Benchmark", value: "Benchmark" },
+                              {
+                                label: "General Catalyst",
+                                value: "General Catalyst",
+                              },
+                              {
+                                label: "Bessemer Venture Partners",
+                                value: "Bessemer Venture Partners",
+                              },
+                              {
+                                label: "First Round Capital",
+                                value: "First Round Capital",
+                              },
+                              {
+                                label: "Founders Fund",
+                                value: "Founders Fund",
+                              },
+                              { label: "GV", value: "GV" },
+                              {
+                                label: "Intel Capital",
+                                value: "Intel Capital",
+                              },
+                              {
+                                label: "Khosla Ventures",
+                                value: "Khosla Ventures",
+                              },
+                              {
+                                label: "Lightspeed Venture Partners",
+                                value: "Lightspeed Venture Partners",
+                              },
+                              {
+                                label: "Redpoint Ventures",
+                                value: "Redpoint Ventures",
+                              },
+                              {
+                                label: "Union Square Ventures",
+                                value: "Union Square Ventures",
+                              },
+                            ]}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder="Add investors..."
+                            allowCustom={true}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="locations">Locations (comma separated)</Label>
-                  <Input
-                    id="locations"
-                    value={form.watch("locations")?.join(", ") || ""}
-                    onChange={(e) => {
-                      const locations = e.target.value
-                        .split(",")
-                        .map((loc) => loc.trim());
-                      form.setValue("locations", locations);
-                    }}
-                    placeholder="San Francisco, New York, Remote"
+                {/* Recent Financing */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Recent Financing</h3>
+
+                  <FormField
+                    control={form.control}
+                    name="recentFinancingAmount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Recent Financing Amount (USD)</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="10M or 10,000,000"
+                            {...field}
+                            onBlur={(e) =>
+                              handleFinancingAmountBlur(e.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="recentFinancingDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Recent Financing Date</FormLabel>
+                        <FormControl>
+                          <MonthYearPicker
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select month and year"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
               </div>
             </div>
 
-            {/* Form Actions */}
-            <div className="flex items-center gap-4 pt-6 border-t">
-              <Button type="submit" className="cursor-pointer">
-                Save Changes
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                className="cursor-pointer"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </Card>
+            {/* Logo Preview Sidebar */}
+            {logoUrl && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Logo Preview</h3>
+                <ImagePreview
+                  src={logoUrl}
+                  alt={`${companyName} logo`}
+                  className="w-full aspect-square max-w-48"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Submit Buttons */}
+          <div className="flex items-center justify-end gap-4 pt-6 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="cursor-pointer"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={form.formState.isSubmitting}
+              className="cursor-pointer"
+            >
+              {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
