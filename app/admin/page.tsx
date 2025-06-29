@@ -1,6 +1,5 @@
 "use client";
 
-import { AddCompanyDialog } from "@/app/admin/components/add-company-dialog";
 import { columns } from "@/app/admin/components/companies-columns";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
@@ -12,12 +11,11 @@ import { useDataTable } from "@/hooks/use-data-table";
 import { ExclamationTriangleIcon, PlusIcon } from "@radix-ui/react-icons";
 import { Card } from "@radix-ui/themes";
 import { useQuery } from "convex/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense } from "react";
 
 export default function AdminPage() {
-  const [showAddDialog, setShowAddDialog] = useState(false);
-
   return (
     <div className="space-y-8 p-6">
       <div className="flex items-center justify-between">
@@ -41,27 +39,18 @@ export default function AdminPage() {
               Manage company data and job board integrations
             </p>
           </div>
-          <Button
-            className="cursor-pointer"
-            onClick={() => setShowAddDialog(true)}
-          >
-            <PlusIcon className="mr-2 size-4" />
-            Add Company
-          </Button>
+          <Link href="/admin/companies/add">
+            <Button className="cursor-pointer">
+              <PlusIcon className="mr-2 size-4" />
+              Add Company
+            </Button>
+          </Link>
         </div>
 
         <Suspense fallback={<DataTableSkeleton columnCount={7} />}>
           <CompaniesTable />
         </Suspense>
       </div>
-
-      <AddCompanyDialog
-        open={showAddDialog}
-        onOpenChange={setShowAddDialog}
-        onSuccess={() => {
-          // The table will automatically refresh due to Convex reactivity
-        }}
-      />
     </div>
   );
 }

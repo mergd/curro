@@ -32,7 +32,7 @@ export const list = query({
       tags: v.optional(v.array(v.string())),
       recentFinancing: v.optional(
         v.object({
-          amount: v.string(),
+          amount: v.number(),
           date: v.string(),
         }),
       ),
@@ -82,7 +82,7 @@ export const get = query({
       tags: v.optional(v.array(v.string())),
       recentFinancing: v.optional(
         v.object({
-          amount: v.string(),
+          amount: v.number(),
           date: v.string(),
         }),
       ),
@@ -129,7 +129,7 @@ export const add = mutation({
     locations: v.optional(v.array(v.string())),
     recentFinancing: v.optional(
       v.object({
-        amount: v.string(),
+        amount: v.number(),
         date: v.string(),
       }),
     ),
@@ -162,7 +162,7 @@ export const update = mutation({
     locations: v.optional(v.array(v.string())),
     recentFinancing: v.optional(
       v.object({
-        amount: v.string(),
+        amount: v.number(),
         date: v.string(),
       }),
     ),
@@ -270,7 +270,7 @@ export const fetchCompanyDetailsFromPerplexity = action({
     locations: v.optional(v.array(v.string())),
     recentFinancing: v.optional(
       v.object({
-        amount: v.optional(v.string()),
+        amount: v.optional(v.number()),
         date: v.optional(v.string()),
       }),
     ),
@@ -288,7 +288,7 @@ export const fetchCompanyDetailsFromPerplexity = action({
       locations: z.array(z.string()).optional(),
       recentFinancing: z
         .object({
-          amount: z.string().optional(),
+          amount: z.number().optional(),
           date: z.string().optional(),
         })
         .optional(),
@@ -318,9 +318,13 @@ Focus on accuracy and recent information.`;
 4. Company stage (choose from: ${COMPANY_STAGES.join(", ")})
 5. Industry categories as an array (choose from: ${COMPANY_CATEGORIES.join(", ")})
 6. Specific subcategories as an array. For technology companies, choose from: ${COMPANY_SUBCATEGORIES.technology.join(", ")}. For finance companies, choose from: ${COMPANY_SUBCATEGORIES.finance.join(", ")}. For other industries, use relevant descriptive subcategories.
-7. Company tags as an array (any relevant descriptive tags like business model, stage, characteristics, etc.)
-8. Office locations (as an array of city names)
-9. Recent financing round (if any) with amount and date
+7. Company tags as an array (any relevant descriptive tags like business model, characteristics, etc.)
+8. Office locations (as an array of city, 3 char country code)
+   Use these consistent names for places:
+   - San Francisco Bay Area, USA
+   - New York City, USA
+   - Singapore, SG
+9. Recent financing round (if any) with amount converted to USD dollars (do the currency conversion math) and date
 10. Known investors (if any) - 
 use these consistent names for known investors:
    - Andreessen Horowitz → "a16z"
@@ -342,8 +346,6 @@ use these consistent names for known investors:
    - Union Square Ventures → "USV"
    - Y Combinator → "Y Combinator"
    For other investors, use their most commonly known short form
-
-
 
 Only include information you're confident about. If information is not available or uncertain, omit that field.`;
 

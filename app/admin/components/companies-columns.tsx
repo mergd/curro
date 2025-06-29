@@ -1,6 +1,5 @@
 "use client";
 
-import type { Doc } from "@/convex/_generated/dataModel";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
@@ -12,16 +11,36 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-import { DotsThree } from "@phosphor-icons/react/dist/ssr";
+import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 
-type Company = Doc<"companies">;
+type Company = {
+  _id: string;
+  _creationTime: number;
+  name: string;
+  website?: string;
+  logoUrl?: string;
+  jobBoardUrl: string;
+  sourceType: string;
+  lastScraped?: number;
+  numberOfEmployees?: string;
+  stage?: string;
+  category?: string[];
+  subcategory?: string[];
+  tags?: string[];
+  locations?: string[];
+  scrapingErrors?: Array<{
+    timestamp: number;
+    errorType: string;
+    errorMessage: string;
+    url?: string;
+  }>;
+};
 
 // Helper to determine if a company is problematic
 const isProblematic = (company: Company) => {
@@ -97,10 +116,48 @@ export const columns: ColumnDef<Company>[] = [
   {
     accessorKey: "sourceType",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Source" />
+      <DataTableColumnHeader column={column} title="ATS" />
     ),
     cell: ({ row }) => {
-      return <Badge variant="default">{row.original.sourceType}</Badge>;
+      const sourceType = row.getValue("sourceType") as string;
+      return (
+        <Badge variant="default">
+          {sourceType.charAt(0).toUpperCase() + sourceType.slice(1)}
+        </Badge>
+      );
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id));
+    },
+  },
+  {
+    accessorKey: "numberOfEmployees",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Size" />
+    ),
+    cell: ({ row }) => {
+      const size = row.getValue("numberOfEmployees") as string;
+      return size ? <span className="text-sm">{size}</span> : null;
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id));
+    },
+  },
+  {
+    accessorKey: "stage",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Stage" />
+    ),
+    cell: ({ row }) => {
+      const stage = row.getValue("stage") as string;
+      return stage ? (
+        <Badge variant="default">
+          {stage.charAt(0).toUpperCase() + stage.slice(1).replace(/-/g, " ")}
+        </Badge>
+      ) : null;
+    },
+    filterFn: (row, id, value) => {
+      return value.includes(row.getValue(id));
     },
   },
   {
@@ -109,53 +166,40 @@ export const columns: ColumnDef<Company>[] = [
       <DataTableColumnHeader column={column} title="Last Scraped" />
     ),
     cell: ({ row }) => {
-      const lastScraped = row.original.lastScraped;
-      if (!lastScraped) return "Never";
-      return formatDistanceToNow(new Date(lastScraped), { addSuffix: true });
-    },
-  },
-  {
-    accessorKey: "jobBoardUrl",
-    header: "Job Board",
-    cell: ({ row }) => {
-      return (
-        <Link
-          href={row.original.jobBoardUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 hover:underline"
-        >
-          View
-        </Link>
+      const lastScraped = row.getValue("lastScraped") as number;
+      return lastScraped ? (
+        <span className="text-sm">
+          {formatDistanceToNow(lastScraped, { addSuffix: true })}
+        </span>
+      ) : (
+        <span className="text-sm text-muted-foreground">Never</span>
       );
     },
   },
   {
     id: "actions",
+    enableHiding: false,
     cell: ({ row }) => {
-      const router = useRouter();
       const company = row.original;
 
       return (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="flex size-8 p-0 data-[state=open]:bg-muted"
-            >
-              <DotsThree className="size-4" />
+            <Button variant="outline" className="size-8 p-0">
               <span className="sr-only">Open menu</span>
+              <DotsHorizontalIcon className="size-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-[160px]">
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => router.push(`/admin/companies/${company._id}`)}
+              onClick={() => navigator.clipboard.writeText(company._id)}
             >
-              View details
+              Copy company ID
             </DropdownMenuItem>
-            <DropdownMenuItem>Edit</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+            <DropdownMenuItem>View details</DropdownMenuItem>
+            <DropdownMenuItem>Edit company</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

@@ -50,7 +50,7 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())), // Flexible tags for any company attributes
     recentFinancing: v.optional(
       v.object({
-        amount: v.string(),
+        amount: v.number(),
         date: v.string(),
       }),
     ),
