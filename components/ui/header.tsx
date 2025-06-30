@@ -1,8 +1,9 @@
 "use client";
 
-import { UserButton } from "@/components/auth";
+import { UserMenu } from "@/components/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 
 import { BriefcaseIcon } from "@phosphor-icons/react/dist/ssr";
 import {
@@ -10,7 +11,6 @@ import {
   MagnifyingGlassIcon,
   PersonIcon,
 } from "@radix-ui/react-icons";
-import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -36,85 +36,59 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <BriefcaseIcon className="size-5" />
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                Curro
-              </span>
-            </Link>
-          </motion.div>
+          <Logo />
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
-                <motion.div
+                <Button
                   key={item.href}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  asChild
+                  variant={isActive ? "default" : "ghost"}
+                  size="sm"
+                  className={`gap-2 transition-all duration-200 ${
+                    isActive ? "shadow-md" : "hover:shadow-sm"
+                  }`}
                 >
-                  <Button
-                    asChild
-                    variant={isActive ? "default" : "ghost"}
-                    size="sm"
-                    className="gap-2"
-                  >
-                    <Link href={item.href}>
-                      <item.icon className="size-4" />
-                      {item.label}
-                    </Link>
-                  </Button>
-                </motion.div>
+                  <Link href={item.href}>
+                    <item.icon className="size-4" />
+                    {item.label}
+                  </Link>
+                </Button>
               );
             })}
           </nav>
 
           {/* Search Bar - only show if requested */}
           {showSearch && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: 0.1 }}
-              className="hidden lg:block flex-1 max-w-md mx-6"
-            >
-              <form onSubmit={handleSearch} className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+            <div className="hidden lg:block flex-1 max-w-md mx-6">
+              <form onSubmit={handleSearch} className="relative group">
+                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 <Input
                   type="search"
                   placeholder="Search jobs, companies, or roles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-muted/50 border-0 focus:bg-background transition-colors"
+                  className="w-full pl-10 pr-4 py-2 bg-muted/50 border-0 focus:bg-background transition-all duration-200 hover:bg-muted/70 focus:shadow-md"
                 />
               </form>
-            </motion.div>
+            </div>
           )}
 
           {/* User Actions */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="flex items-center gap-3"
-          >
+          <div className="flex items-center gap-3">
             {/* Mobile Search Toggle - only show if search is enabled */}
             {showSearch && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="lg:hidden"
+                className="lg:hidden hover:bg-primary/10 transition-colors"
                 onClick={() => {
                   // Could implement mobile search modal here
                 }}
@@ -123,12 +97,12 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
               </Button>
             )}
 
-            <UserButton />
-          </motion.div>
+            <UserMenu />
+          </div>
         </div>
 
         {/* Mobile Navigation */}
-        <div className="md:hidden border-t">
+        <div className="md:hidden border-t bg-background/50">
           <nav className="flex items-center justify-around py-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
@@ -138,7 +112,9 @@ export function Header({ onSearch, showSearch = false }: HeaderProps) {
                   asChild
                   variant={isActive ? "default" : "ghost"}
                   size="sm"
-                  className="flex-col h-auto py-2 gap-1"
+                  className={`flex-col h-auto py-2 gap-1 ${
+                    isActive ? "shadow-sm" : ""
+                  }`}
                 >
                   <Link href={item.href}>
                     <item.icon className="size-4" />

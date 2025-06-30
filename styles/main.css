@@ -6,6 +6,10 @@
 @import url("@radix-ui/colors/blue-alpha.css");
 @import url("@radix-ui/colors/blue-dark.css");
 @import url("@radix-ui/colors/blue-dark-alpha.css");
+@import url("@radix-ui/colors/green.css");
+@import url("@radix-ui/colors/green-alpha.css");
+@import url("@radix-ui/colors/green-dark.css");
+@import url("@radix-ui/colors/green-dark-alpha.css");
 @import url("@radix-ui/colors/red.css");
 @import url("@radix-ui/colors/red-dark.css");
 @import url("@radix-ui/colors/black-alpha.css");
@@ -58,10 +62,10 @@
     --card-foreground: var(--gray-12);
     --popover: var(--gray-1);
     --popover-foreground: var(--gray-12);
-    --primary: var(--gray-12);
-    --primary-foreground: var(--gray-2);
-    --secondary: var(--gray-3);
-    --secondary-foreground: var(--gray-12);
+    --primary: var(--blue-10);
+    --primary-foreground: var(--blue-2);
+    --secondary: var(--green-10);
+    --secondary-foreground: var(--green-12);
     --muted-foreground: var(--gray-11);
     --accent: var(--gray-3);
     --accent-foreground: var(--gray-12);

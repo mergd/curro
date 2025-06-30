@@ -4,6 +4,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/convex/_generated/api";
 
@@ -15,7 +16,6 @@ import {
   WarningIcon,
   XCircleIcon,
 } from "@phosphor-icons/react";
-import { Card } from "@/components/ui/card";
 import { useAction, useQuery } from "convex/react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -130,9 +130,7 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <WarningIcon className="size-5 text-red-600" />
-            <p className="text-lg font-medium">
-              Issues Detected
-            </p>
+            <p className="text-lg font-medium">Issues Detected</p>
           </div>
 
           <div className="flex gap-2">
@@ -190,9 +188,7 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
                   className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {job.title}
-                    </p>
+                    <p className="text-sm font-medium truncate">{job.title}</p>
                     <div className="flex items-center gap-1 mt-1">
                       <LinkIcon className="size-3 text-gray-500" />
                       <p className="text-xs text-gray-600 truncate">
@@ -240,9 +236,7 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
                 <div key={index} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-2">
-                      <Badge
-                        className="text-xs"
-                      >
+                      <Badge className="text-xs">
                         {formatErrorType(error.errorType)}
                       </Badge>
                       <span className="text-sm text-gray-600">
@@ -283,7 +277,6 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
     </Card>
   );
 }
-
 
 function formatErrorType(errorType: string): string {
   return errorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());

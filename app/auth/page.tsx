@@ -2,14 +2,30 @@
 
 import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 
 import { useAuthActions } from "@convex-dev/auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeftIcon, EnvelopeIcon, LockIcon } from "@phosphor-icons/react";
 import { useQuery } from "convex/react";
-import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -17,22 +33,45 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+const signInSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
 });
+
+const signUpSchema = z
+  .object({
+    email: z.string().email("Please enter a valid email address"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+type SignInFormData = z.infer<typeof signInSchema>;
+type SignUpFormData = z.infer<typeof signUpSchema>;
 
 export default function AuthPage() {
   const { signIn } = useAuthActions();
   const user = useQuery(api.auth.currentUser);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [activeTab, setActiveTab] = useState("signin");
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const signInForm = useForm<SignInFormData>({
+    resolver: zodResolver(signInSchema),
     defaultValues: {
       email: "",
       password: "",
+    },
+  });
+
+  const signUpForm = useForm<SignUpFormData>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -43,18 +82,14 @@ export default function AuthPage() {
     }
   }, [user, router]);
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSignIn = async (values: SignInFormData) => {
     try {
       await signIn("password", {
         email: values.email,
         password: values.password,
-        flow: isSignUp ? "signUp" : "signIn",
+        flow: "signIn",
       });
-      form.reset();
-
-      if (isSignUp) {
-        toast.success("Account created successfully!");
-      }
+      signInForm.reset();
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Sign in error:", error);
@@ -64,89 +99,208 @@ export default function AuthPage() {
     }
   };
 
+  const onSignUp = async (values: SignUpFormData) => {
+    try {
+      await signIn("password", {
+        email: values.email,
+        password: values.password,
+        flow: "signUp",
+      });
+      signUpForm.reset();
+      toast.success("Account created successfully!");
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      const errorMessage =
+        error.data?.message || "Failed to create account. Please try again.";
+      toast.error(errorMessage);
+    }
+  };
+
   if (user) {
     return null; // Will redirect in useEffect
   }
 
+  const tabItems = [
+    { value: "signin", label: "Sign In" },
+    { value: "signup", label: "Sign Up" },
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-screen flex items-center -mt-12 justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6">
         {/* Back to home link */}
         <Link
           href="/"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft className="size-4 mr-1" />
+          <ArrowLeftIcon className="size-4 mr-1" />
           Back to home
         </Link>
 
-        <Card className="p-6">
-          <div className="space-y-6">
-            <div className="text-center space-y-2">
-              <h1 className="text-2xl font-bold">
-                {isSignUp ? "Create Account" : "Sign In"}
-              </h1>
-              <p className="text-muted-foreground">
-                {isSignUp
-                  ? "Create an account to get started"
-                  : "Welcome back! Please sign in to continue"}
-              </p>
-            </div>
+        <Logo />
+        <Card>
+          <CardHeader className="text-left">
+            <CardTitle className="text-2xl">Welcome</CardTitle>
+            <CardDescription>
+              Sign in to your account or create a new one
+            </CardDescription>
+          </CardHeader>
 
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  type="email"
-                  placeholder="Email"
-                  {...form.register("email")}
-                  required
-                />
-                {form.formState.errors.email && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.email.message}
-                  </p>
-                )}
-              </div>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList
+                items={tabItems}
+                defaultValue="signin"
+                onValueChange={setActiveTab}
+              />
 
-              <div className="space-y-2">
-                <PasswordInput
-                  placeholder="Password"
-                  {...form.register("password")}
-                  required
-                />
-                {form.formState.errors.password && (
-                  <p className="text-sm text-destructive">
-                    {form.formState.errors.password.message}
-                  </p>
-                )}
-              </div>
+              <TabsContent value="signin" className="space-y-4">
+                <Form {...signInForm}>
+                  <form
+                    onSubmit={signInForm.handleSubmit(onSignIn)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={signInForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+                              <Input
+                                type="email"
+                                placeholder="Enter your email"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={form.formState.isSubmitting}
-              >
-                {form.formState.isSubmitting
-                  ? "Loading..."
-                  : isSignUp
-                    ? "Create Account"
-                    : "Sign In"}
-              </Button>
-            </form>
+                    <FormField
+                      control={signInForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <LockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+                              <PasswordInput
+                                placeholder="Enter your password"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm"
-              >
-                {isSignUp
-                  ? "Already have an account? Sign in"
-                  : "Need an account? Sign up"}
-              </Button>
-            </div>
-          </div>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={signInForm.formState.isSubmitting}
+                    >
+                      {signInForm.formState.isSubmitting
+                        ? "Signing in..."
+                        : "Sign In"}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+
+              <TabsContent value="signup" className="space-y-4">
+                <Form {...signUpForm}>
+                  <form
+                    onSubmit={signUpForm.handleSubmit(onSignUp)}
+                    className="space-y-4"
+                  >
+                    <FormField
+                      control={signUpForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <EnvelopeIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+                              <Input
+                                type="email"
+                                placeholder="Enter your email"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={signUpForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <LockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+                              <PasswordInput
+                                placeholder="Create a password (min. 8 characters)"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={signUpForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <LockIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 size-4 text-muted-foreground" />
+                              <PasswordInput
+                                placeholder="Confirm your password"
+                                className="pl-10"
+                                {...field}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={signUpForm.formState.isSubmitting}
+                    >
+                      {signUpForm.formState.isSubmitting
+                        ? "Creating account..."
+                        : "Create Account"}
+                    </Button>
+                  </form>
+                </Form>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
         </Card>
       </div>
     </div>

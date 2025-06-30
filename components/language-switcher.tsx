@@ -3,7 +3,12 @@
 import type { Locale } from "@/lib/i18n/routing";
 
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { locales } from "@/lib/i18n/routing";
 
 import { CheckIcon } from "@radix-ui/react-icons";

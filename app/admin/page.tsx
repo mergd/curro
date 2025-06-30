@@ -7,6 +7,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -17,7 +18,6 @@ import {
   GearIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
-import { Card } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

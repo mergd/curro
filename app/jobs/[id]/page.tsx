@@ -29,24 +29,17 @@ interface JobDetailPageProps {
   }>;
 }
 
-// Utility function to detect if a job URL is from Greenhouse
-function isGreenhouseJob(url: string, companySourceType?: string): boolean {
-  const lower = url.toLowerCase();
-  return (
-    lower.includes("greenhouse.io") ||
-    lower.includes("job-boards.greenhouse.io") ||
-    companySourceType === "greenhouse"
-  );
-}
-
 export default function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = use(params);
   const job = useQuery(api.jobs.get, { id: id as Id<"jobs"> });
 
-  const isGreenhouse = useMemo(() => {
-    if (!job) return false;
-    return isGreenhouseJob(job.url, job.company?.sourceType);
-  }, [job]);
+  const hasEmbeddableATS = useMemo(() => {
+    if (!job?.company?.sourceType) return false;
+    return (
+      job.company.sourceType === "greenhouse" ||
+      job.company.sourceType === "ashby"
+    );
+  }, [job?.company?.sourceType]);
 
   const tabItems: TabItem[] = useMemo(() => {
     const items: TabItem[] = [
@@ -57,16 +50,18 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
       },
     ];
 
-    if (isGreenhouse) {
+    if (hasEmbeddableATS && job?.company?.sourceType) {
+      const atsName =
+        job.company.sourceType === "greenhouse" ? "Greenhouse" : "Ashby";
       items.push({
         value: "apply",
-        label: "Apply via Greenhouse",
+        label: `Apply via ${atsName}`,
         icon: <CheckIcon className="size-4" />,
       });
     }
 
     return items;
-  }, [isGreenhouse]);
+  }, [hasEmbeddableATS, job?.company?.sourceType]);
 
   if (!job) {
     return (
@@ -169,7 +164,14 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                   {" years experience"}
                 </Badge>
               )}
-              {isGreenhouse && <Badge color="gray">Greenhouse ATS</Badge>}
+              {job.company?.sourceType &&
+                job.company.sourceType !== "other" && (
+                  <Badge color="gray">
+                    {job.company.sourceType.charAt(0).toUpperCase() +
+                      job.company.sourceType.slice(1)}{" "}
+                    ATS
+                  </Badge>
+                )}
             </div>
 
             {/* Salary */}
@@ -221,7 +223,7 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                 </div>
               </TabsContent>
 
-              {isGreenhouse && (
+              {hasEmbeddableATS && job.company?.sourceType && (
                 <TabsContent value="apply" className="space-y-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -230,8 +232,11 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                           Apply Directly
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                          Complete your application in the Greenhouse interface
-                          below
+                          Complete your application in the{" "}
+                          {job.company.sourceType === "greenhouse"
+                            ? "Greenhouse"
+                            : "Ashby"}{" "}
+                          interface below
                         </p>
                       </div>
                       <Button asChild variant="outline" size="sm">

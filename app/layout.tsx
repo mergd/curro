@@ -3,6 +3,7 @@ import "@/styles/main.css";
 import type { Metadata } from "next";
 
 import { Providers } from "@/components/providers";
+import { Header } from "@/components/ui/header";
 import { OpenGraph } from "@/lib/og";
 import { fonts } from "@/styles/fonts";
 
@@ -27,7 +28,7 @@ export default async function RootLayout({
       <body suppressHydrationWarning>
         <Providers messages={messages} locale={locale}>
           <Toaster />
-          <main className="isolate mx-auto ">
+          <main className="isolate mx-auto">
             <article className="article">{children}</article>
           </main>
         </Providers>
