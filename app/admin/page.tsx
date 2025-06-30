@@ -17,7 +17,7 @@ import {
   GearIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
-import { Card } from "@radix-ui/themes";
+import { Card } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

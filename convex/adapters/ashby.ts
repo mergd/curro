@@ -1,8 +1,17 @@
 import { BaseATSAdapter } from "./base";
 
+/**
+ * Ashby Adapter - Requires JSDOM processing for job board pages
+ *
+ * Ashby job boards are heavily JavaScript-dependent, requiring DOM manipulation
+ * to render job listings. This adapter should be used with HTML that has been
+ * processed through JSDOM (see adapters/jsdom.ts) to ensure all job postings
+ * are properly loaded and visible in the HTML.
+ */
 export class AshbyAdapter extends BaseATSAdapter {
   name = "Ashby";
 
+  // Method for extracting job links from rendered HTML (after JSDOM processing)
   extractJobLinks(html: string, baseUrl: string): string[] {
     try {
       // Ashby embeds job data in JSON format within the HTML
@@ -10,7 +19,6 @@ export class AshbyAdapter extends BaseATSAdapter {
 
       let postings: any[] = [];
 
-      // Method 1: Try to extract jobPostings array more carefully
       const jobPostingsIndex = html.indexOf('"jobPostings":');
       if (jobPostingsIndex !== -1) {
         // Find the start of the array
@@ -40,30 +48,6 @@ export class AshbyAdapter extends BaseATSAdapter {
         }
       }
 
-      // Method 2: If that fails, look for individual job UUIDs in the HTML
-      if (postings.length === 0) {
-        console.log("Trying fallback method to find job IDs");
-        const uuidRegex =
-          /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
-        const uuidMatches = html.match(uuidRegex) || [];
-
-        // Filter for what looks like job IDs (appear in job-like contexts)
-        const potentialJobIds = [...new Set(uuidMatches)].filter((uuid) => {
-          // Look for UUIDs that appear in contexts suggesting they're job IDs
-          const contextRegex = new RegExp(
-            `"id":\\s*"${uuid}"[\\s\\S]*?"title":`,
-          );
-          return contextRegex.test(html);
-        });
-
-        console.log(
-          `Found ${potentialJobIds.length} potential job IDs via fallback method`,
-        );
-
-        // Create mock postings for the job IDs we found
-        postings = potentialJobIds.map((id) => ({ id, isListed: true }));
-      }
-
       if (postings.length === 0) {
         console.log("No job postings found in Ashby page");
         console.log("HTML sample:", html.substring(0, 500));
@@ -76,8 +60,11 @@ export class AshbyAdapter extends BaseATSAdapter {
       for (const posting of postings) {
         if (posting.id && posting.isListed !== false) {
           // Construct the job URL using the posting ID
-          // Format: https://jobs.ashbyhq.com/{company}/d37f8d9c-8efc-40de-b068-37bb03b37e91
-          const jobUrl = `${baseUrl}/${posting.id}`;
+          // Ensure proper URL joining without double slashes
+          const cleanBaseUrl = baseUrl.endsWith("/")
+            ? baseUrl.slice(0, -1)
+            : baseUrl;
+          const jobUrl = `${cleanBaseUrl}/${posting.id}`;
           jobLinks.push(jobUrl);
         }
       }

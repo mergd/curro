@@ -4,7 +4,7 @@ import {
 } from "@convex-dev/auth/nextjs/server";
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 
-const PROTECTED_PATHS = ["/dashboard", "/admin"];
+const PROTECTED_PATHS = ["/admin"];
 
 export default convexAuthNextjsMiddleware(
   (

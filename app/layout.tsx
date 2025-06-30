@@ -1,5 +1,4 @@
 import "@/styles/main.css";
-import "@radix-ui/themes/styles.css";
 
 import type { Metadata } from "next";
 
@@ -7,7 +6,6 @@ import { Providers } from "@/components/providers";
 import { OpenGraph } from "@/lib/og";
 import { fonts } from "@/styles/fonts";
 
-import { Theme } from "@radix-ui/themes";
 import clsx from "clsx";
 import { getLocale, getMessages } from "next-intl/server";
 import { Toaster } from "sonner";
@@ -26,14 +24,12 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={clsx(fonts)} suppressHydrationWarning>
-      <body>
+      <body suppressHydrationWarning>
         <Providers messages={messages} locale={locale}>
-          <Theme accentColor="gray" radius="large" scaling="90%">
-            <Toaster />
-            <main className="isolate mx-auto ">
-              <article className="article">{children}</article>
-            </main>
-          </Theme>
+          <Toaster />
+          <main className="isolate mx-auto ">
+            <article className="article">{children}</article>
+          </main>
         </Providers>
       </body>
     </html>

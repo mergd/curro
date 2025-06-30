@@ -1,6 +1,5 @@
+import type { Doc } from "@/convex/_generated/dataModel";
 import type { ColumnDef } from "@tanstack/react-table";
-
-import type { Doc } from "../../convex/_generated/dataModel";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { Badge } from "@/components/ui/badge";

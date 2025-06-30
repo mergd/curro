@@ -1,10 +1,10 @@
-import type { Doc } from "../../convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { CompanyLogo } from "@/components/ui/company-logo";
 
 import { ClockIcon, GlobeIcon } from "@radix-ui/react-icons";
-import { Card } from "@radix-ui/themes";
 import Link from "next/link";
 
 type JobWithCompany = Doc<"jobs"> & {

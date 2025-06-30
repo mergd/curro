@@ -16,3 +16,4 @@ When importing convex - use @/ instead of a long relative path.
 For pageProps with dynamic routes - this is next 15, so make sure to mark these as a promise
 
 Make sure to have a good skeleton.
+

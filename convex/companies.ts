@@ -327,6 +327,33 @@ export const getErrorStats = query({
   },
 });
 
+export const clearErrors = mutation({
+  args: { id: v.id("companies") },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, {
+      scrapingErrors: [],
+    });
+    return null;
+  },
+});
+
+export const resetBackoff = mutation({
+  args: { id: v.id("companies") },
+  returns: v.null(),
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, {
+      backoffInfo: {
+        level: 0,
+        nextAllowedScrape: Date.now(),
+        consecutiveFailures: 0,
+        totalFailures: 0,
+      },
+    });
+    return null;
+  },
+});
+
 export const fetchCompanyDetailsFromPerplexity = action({
   args: {
     companyName: v.string(),

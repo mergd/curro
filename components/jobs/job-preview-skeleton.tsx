@@ -1,4 +1,4 @@
-import { Card } from "@radix-ui/themes";
+import { Card } from "@/components/ui/card";
 
 export function JobPreviewSkeleton() {
   return (

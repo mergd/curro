@@ -1,39 +1,41 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
 import { EyeIcon, EyeSlashIcon } from "@phosphor-icons/react/dist/ssr";
-import { Button, TextField } from "@radix-ui/themes";
 import * as React from "react";
 
-export type PasswordInputProps = React.ComponentProps<typeof TextField.Root>;
+export type PasswordInputProps = React.ComponentProps<typeof Input>;
 
 const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
-  ({ ...props }, ref) => {
+  ({ className, ...props }, ref) => {
     const [showPassword, setShowPassword] = React.useState(false);
     const togglePasswordVisibility = () => setShowPassword(!showPassword);
 
     return (
-      <TextField.Root
-        type={showPassword ? "text" : "password"}
-        ref={ref}
-        {...props}
-      >
-        <TextField.Slot side="right">
-          <Button
-            type="button"
-            variant="ghost"
-            size="1"
-            onClick={togglePasswordVisibility}
-            disabled={props.disabled}
-            className=""
-          >
-            {showPassword ? (
-              <EyeSlashIcon className="size-4" aria-hidden="true" />
-            ) : (
-              <EyeIcon className="size-4" aria-hidden="true" />
-            )}
-          </Button>
-        </TextField.Slot>
-      </TextField.Root>
+      <div className="relative">
+        <Input
+          type={showPassword ? "text" : "password"}
+          ref={ref}
+          className={className}
+          {...props}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={togglePasswordVisibility}
+          disabled={props.disabled}
+          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+        >
+          {showPassword ? (
+            <EyeSlashIcon className="size-4" aria-hidden="true" />
+          ) : (
+            <EyeIcon className="size-4" aria-hidden="true" />
+          )}
+        </Button>
+      </div>
     );
   },
 );

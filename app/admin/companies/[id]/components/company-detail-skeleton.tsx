@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { Card } from "@radix-ui/themes";
+import { Card } from "@/components/ui/card";
 
 export function CompanyDetailSkeleton() {
   return (

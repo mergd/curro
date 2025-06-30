@@ -194,33 +194,6 @@ export const fetchAndParseJobs = internalAction({
       let html: string;
       let fetchMethod = "simple";
 
-      // if (sourceType === "ashby") {
-      //   // Ashby often requires JavaScript rendering, try enhanced fetch
-      //   const { smartFetch } = await import("./adapters/utils");
-      //   const result = await smartFetch(jobBoardUrl, {
-      //     fallbackToCrawlee: true,
-      //     crawleeOptions: {
-      //       waitForSelector: '[data-testid="job-board"]',
-      //       timeout: 10000,
-      //     },
-      //   });
-
-      //   if (!result.success) {
-      //     const errorMsg = result.error || "Enhanced fetch failed";
-      //     await addCompanyError(
-      //       ctx,
-      //       companyId,
-      //       "fetch_failed",
-      //       errorMsg,
-      //       jobBoardUrl,
-      //     );
-      //     throw new Error(errorMsg);
-      //   }
-
-      //   html = result.html;
-      //   fetchMethod = result.method;
-      //   console.log(`Ashby page fetched using: ${fetchMethod}`);
-      // } else {
       // Use simple fetch for other sources
       const response = await fetch(jobBoardUrl, {
         headers: {
@@ -242,7 +215,7 @@ export const fetchAndParseJobs = internalAction({
       }
 
       html = await response.text();
-      // }
+
       console.log("HTML fetched, length:", html.length);
       console.log("HTML:", html.slice(0, 20000));
 
@@ -251,8 +224,23 @@ export const fetchAndParseJobs = internalAction({
       let atsType = sourceType;
 
       if (sourceType === "ashby") {
-        const adapter = new AshbyAdapter();
-        links = await adapter.extractJobLinks(html, jobBoardUrl);
+        // Use JSDOM-based scraping for Ashby since it requires JavaScript execution
+        const jsdomResult = await ctx.runAction(
+          internal.adapters.jsdom.scrapeWithJSDOM,
+          { url: jobBoardUrl },
+        );
+
+        if (jsdomResult.success && jsdomResult.html) {
+          const adapter = new AshbyAdapter();
+          links = adapter.extractJobLinks(jsdomResult.html, jobBoardUrl);
+          console.log(
+            `Ashby JSDOM scraping successful: ${links.length} jobs found`,
+          );
+        } else {
+          throw new Error(
+            `Ashby JSDOM scraping failed: ${jsdomResult.error || "Unknown error"}`,
+          );
+        }
       } else if (sourceType === "greenhouse") {
         const adapter = new GreenhouseAdapter();
         links = await adapter.extractJobLinks(html, jobBoardUrl);
@@ -340,6 +328,7 @@ export const fetchAndParseJobs = internalAction({
             {
               jobId,
               jobUrl: absoluteUrl,
+              atsType,
             },
           );
         }
@@ -404,8 +393,9 @@ export const fetchJobDetails = internalAction({
   args: {
     jobId: v.id("jobs"),
     jobUrl: v.string(),
+    atsType: v.optional(v.string()),
   },
-  handler: async (ctx, { jobId, jobUrl }) => {
+  handler: async (ctx, { jobId, jobUrl, atsType }) => {
     // Get the job to find the company ID for error tracking
     const job = await ctx.runQuery(api.jobs.get, { id: jobId });
     const companyId = job?.companyId;
@@ -420,31 +410,63 @@ export const fetchJobDetails = internalAction({
       await new Promise((resolve) => setTimeout(resolve, JOB_DETAILS_DELAY_MS));
 
       // 2. Fetch the individual job page
-      const response = await fetch(jobUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; JobScraper/1.0)",
-        },
-      });
+      let html: string;
 
-      if (!response.ok) {
-        const errorMsg = `Failed to fetch job details: HTTP ${response.status}`;
-        console.error(errorMsg);
+      // Check if this is an Ashby job page that might need JSDOM
+      if (atsType === SOURCE_TYPES[0]) {
+        console.log("Ashby job page detected, using JSDOM for job details");
+        const jsdomResult = await ctx.runAction(
+          internal.adapters.jsdom.scrapeWithJSDOM,
+          { url: jobUrl, waitTime: 1000 },
+        );
 
-        // Track the error for this company if we have the companyId
-        if (companyId) {
-          await addCompanyError(
-            ctx,
-            companyId,
-            "job_fetch_failed",
-            errorMsg,
-            jobUrl,
-          );
+        if (jsdomResult.success && jsdomResult.html) {
+          html = jsdomResult.html;
+        } else {
+          const errorMsg = `Failed to fetch Ashby job details with JSDOM: ${jsdomResult.error}`;
+          console.error(errorMsg);
+
+          // Track the error for this company if we have the companyId
+          if (companyId) {
+            await addCompanyError(
+              ctx,
+              companyId,
+              "job_fetch_failed",
+              errorMsg,
+              jobUrl,
+            );
+          }
+
+          return { success: false };
+        }
+      } else {
+        // Use regular fetch for non-Ashby pages
+        const response = await fetch(jobUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (compatible; JobScraper/1.0)",
+          },
+        });
+
+        if (!response.ok) {
+          const errorMsg = `Failed to fetch job details: HTTP ${response.status}`;
+          console.error(errorMsg);
+
+          // Track the error for this company if we have the companyId
+          if (companyId) {
+            await addCompanyError(
+              ctx,
+              companyId,
+              "job_fetch_failed",
+              errorMsg,
+              jobUrl,
+            );
+          }
+
+          return { success: false };
         }
 
-        return { success: false };
+        html = await response.text();
       }
-
-      const html = await response.text();
 
       // 3. Parse detailed job information using AI
       const jobDetails = await parseJobDetails(html);
@@ -550,6 +572,7 @@ export const retryFailedJob = action({
         {
           jobId,
           jobUrl: job.url,
+          atsType: job.source,
         },
       );
 
@@ -593,6 +616,7 @@ export const retryFailedJobsForCompany = action({
             {
               jobId: job._id,
               jobUrl: job.url,
+              atsType: job.source,
             },
           );
           retriedCount++;

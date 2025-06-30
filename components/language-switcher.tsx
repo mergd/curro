@@ -2,10 +2,11 @@
 
 import type { Locale } from "@/lib/i18n/routing";
 
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { locales } from "@/lib/i18n/routing";
 
 import { CheckIcon } from "@radix-ui/react-icons";
-import { Button, DropdownMenu } from "@radix-ui/themes";
 import { Languages } from "lucide-react";
 import { useLocale } from "next-intl";
 
@@ -31,30 +32,30 @@ export function LanguageSwitcher() {
   };
 
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger>
-        <Button variant="ghost" size="2" className="gap-2">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="gap-2">
           <Languages className="size-4" />
           <span className="hidden sm:inline">
             {languageFlags[locale]} {languageNames[locale]}
           </span>
           <span className="sm:hidden">{languageFlags[locale]}</span>
         </Button>
-      </DropdownMenu.Trigger>
+      </DropdownMenuTrigger>
 
-      <DropdownMenu.Content>
+      <DropdownMenuContent>
         {locales.map((lang) => (
-          <DropdownMenu.Item
-            className="gap-1"
+          <DropdownMenuItem
             key={lang}
             onClick={() => handleLanguageChange(lang)}
+            className="gap-2"
           >
             <span className="text-base">{languageFlags[lang]}</span>
             <span className="flex-1">{languageNames[lang]}</span>
-            {locale === lang && <CheckIcon className="size-4 ml-3" />}
-          </DropdownMenu.Item>
+            {locale === lang && <CheckIcon className="size-4 ml-auto" />}
+          </DropdownMenuItem>
         ))}
-      </DropdownMenu.Content>
-    </DropdownMenu.Root>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -1,23 +1,27 @@
 "use client";
 
+import type { TabItem } from "@/components/ui/tabs";
 import type { Id } from "@/convex/_generated/dataModel";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { CompanyLogo } from "@/components/ui/company-logo";
+import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import { api } from "@/convex/_generated/api";
 import { formatSalary, timeAgo } from "@/lib/formatters";
 
 import {
   ArrowLeftIcon,
+  CheckIcon,
   ClockIcon,
   ExternalLinkIcon,
+  FileTextIcon,
   GlobeIcon,
 } from "@radix-ui/react-icons";
-import { Card } from "@radix-ui/themes";
 import { useQuery } from "convex/react";
 import Link from "next/link";
-
-import { api } from "../../../convex/_generated/api";
+import { use, useMemo } from "react";
 
 interface JobDetailPageProps {
   params: Promise<{
@@ -25,9 +29,44 @@ interface JobDetailPageProps {
   }>;
 }
 
-export default async function JobDetailPage({ params }: JobDetailPageProps) {
-  const { id } = await params;
+// Utility function to detect if a job URL is from Greenhouse
+function isGreenhouseJob(url: string, companySourceType?: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("greenhouse.io") ||
+    lower.includes("job-boards.greenhouse.io") ||
+    companySourceType === "greenhouse"
+  );
+}
+
+export default function JobDetailPage({ params }: JobDetailPageProps) {
+  const { id } = use(params);
   const job = useQuery(api.jobs.get, { id: id as Id<"jobs"> });
+
+  const isGreenhouse = useMemo(() => {
+    if (!job) return false;
+    return isGreenhouseJob(job.url, job.company?.sourceType);
+  }, [job]);
+
+  const tabItems: TabItem[] = useMemo(() => {
+    const items: TabItem[] = [
+      {
+        value: "overview",
+        label: "Overview",
+        icon: <FileTextIcon className="size-4" />,
+      },
+    ];
+
+    if (isGreenhouse) {
+      items.push({
+        value: "apply",
+        label: "Apply via Greenhouse",
+        icon: <CheckIcon className="size-4" />,
+      });
+    }
+
+    return items;
+  }, [isGreenhouse]);
 
   if (!job) {
     return (
@@ -130,6 +169,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   {" years experience"}
                 </Badge>
               )}
+              {isGreenhouse && <Badge color="gray">Greenhouse ATS</Badge>}
             </div>
 
             {/* Salary */}
@@ -139,37 +179,86 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               </div>
             )}
 
-            {/* Description */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Job Description</h2>
-              <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                  {job.description}
-                </div>
-              </div>
-            </div>
+            {/* Tabs for Content */}
+            <Tabs defaultValue="overview" className="space-y-6">
+              <TabsList items={tabItems} />
 
-            {/* Requirements */}
-            {job.parsedRequirements && (
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold">Requirements</h2>
-                <div className="prose max-w-none">
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {job.parsedRequirements}
+              <TabsContent value="overview" className="space-y-6">
+                {/* Description */}
+                <div className="space-y-4">
+                  <h2 className="text-xl font-semibold">Job Description</h2>
+                  <div className="prose max-w-none">
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {job.description}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
 
-            {/* Apply Button */}
-            <div className="pt-6">
-              <Button asChild size="lg" className="">
-                <Link href={job.url} target="_blank" rel="noopener noreferrer">
-                  Apply Now
-                  <ExternalLinkIcon className="ml-2 size-4" />
-                </Link>
-              </Button>
-            </div>
+                {/* Requirements */}
+                {job.parsedRequirements && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-semibold">Requirements</h2>
+                    <div className="prose max-w-none">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {job.parsedRequirements}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Apply Button */}
+                <div className="pt-6">
+                  <Button asChild size="lg" className="">
+                    <Link
+                      href={job.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Apply Now
+                      <ExternalLinkIcon className="ml-2 size-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </TabsContent>
+
+              {isGreenhouse && (
+                <TabsContent value="apply" className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-xl font-semibold">
+                          Apply Directly
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                          Complete your application in the Greenhouse interface
+                          below
+                        </p>
+                      </div>
+                      <Button asChild variant="outline" size="sm">
+                        <Link
+                          href={job.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open in New Tab
+                          <ExternalLinkIcon className="ml-2 size-4" />
+                        </Link>
+                      </Button>
+                    </div>
+
+                    <div className="border rounded-lg overflow-hidden bg-background">
+                      <iframe
+                        src={job.url}
+                        className="w-full h-[800px] border-0"
+                        title={`Apply for ${job.title} at ${job.company?.name}`}
+                        allowFullScreen
+                        sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation"
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+              )}
+            </Tabs>
           </div>
         </Card>
       </div>

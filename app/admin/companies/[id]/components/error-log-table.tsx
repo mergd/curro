@@ -15,9 +15,8 @@ import {
   WarningIcon,
   XCircleIcon,
 } from "@phosphor-icons/react";
-import { Card, Flex, Text } from "@radix-ui/themes";
+import { Card } from "@/components/ui/card";
 import { useAction, useQuery } from "convex/react";
-import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -111,21 +110,15 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
   if (isHealthy) {
     return (
       <Card className="p-6">
-        <Flex
-          align="center"
-          justify="center"
-          direction="column"
-          gap="3"
-          className="py-8"
-        >
+        <div className="flex items-center justify-center flex-col gap-3 py-8">
           <CheckCircleIcon className="size-12 text-green-600" />
-          <Text size="4" weight="medium" className="text-green-600">
+          <p className="text-lg font-medium text-green-600">
             Company is healthy
-          </Text>
-          <Text size="2" color="gray">
+          </p>
+          <p className="text-sm text-gray-600">
             No errors or failed jobs in the last 24 hours
-          </Text>
-        </Flex>
+          </p>
+        </div>
       </Card>
     );
   }
@@ -134,15 +127,15 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
     <Card className="p-6">
       <div className="space-y-6">
         {/* Header */}
-        <Flex align="center" justify="between">
-          <Flex align="center" gap="2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <WarningIcon className="size-5 text-red-600" />
-            <Text size="4" weight="medium">
+            <p className="text-lg font-medium">
               Issues Detected
-            </Text>
-          </Flex>
+            </p>
+          </div>
 
-          <Flex gap="2">
+          <div className="flex gap-2">
             {hasErrors && (
               <Button
                 variant="outline"
@@ -176,19 +169,19 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
                 Retry All Failed Jobs
               </Button>
             )}
-          </Flex>
-        </Flex>
+          </div>
+        </div>
 
         {/* Failed Jobs Section */}
         {hasFailedJobs && (
           <div className="space-y-3">
-            <Flex align="center" gap="2">
+            <div className="flex items-center gap-2">
               <ClockIcon className="size-4 text-orange-600" />
-              <Text size="3" weight="medium">
+              <p className="text-base font-medium">
                 {failedJobs?.length} Failed Job
                 {failedJobs?.length !== 1 ? "s" : ""}
-              </Text>
-            </Flex>
+              </p>
+            </div>
 
             <div className="grid gap-2 max-h-40 overflow-y-auto">
               {failedJobs?.map((job) => (
@@ -197,15 +190,15 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
                   className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg"
                 >
                   <div className="flex-1 min-w-0">
-                    <Text size="2" weight="medium" className="truncate">
+                    <p className="text-sm font-medium truncate">
                       {job.title}
-                    </Text>
-                    <Flex align="center" gap="1" className="mt-1">
+                    </p>
+                    <div className="flex items-center gap-1 mt-1">
                       <LinkIcon className="size-3 text-gray-500" />
-                      <Text size="1" color="gray" className="truncate">
+                      <p className="text-xs text-gray-600 truncate">
                         {job.url}
-                      </Text>
-                    </Flex>
+                      </p>
+                    </div>
                   </div>
 
                   <Button
@@ -234,42 +227,41 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
         {/* Recent Errors Section */}
         {hasErrors && (
           <div className="space-y-3">
-            <Flex align="center" gap="2">
+            <div className="flex items-center gap-2">
               <WarningIcon className="size-4 text-red-600" />
-              <Text size="3" weight="medium">
+              <p className="text-base font-medium">
                 {recentErrors.length} Error
                 {recentErrors.length !== 1 ? "s" : ""} in Last 24 Hours
-              </Text>
-            </Flex>
+              </p>
+            </div>
 
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {recentErrors.map((error: any, index: number) => (
                 <div key={index} className="border rounded-lg p-4 space-y-3">
-                  <Flex align="start" justify="between">
-                    <Flex align="center" gap="2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
                       <Badge
-                        color={getErrorTypeColor(error.errorType)}
                         className="text-xs"
                       >
                         {formatErrorType(error.errorType)}
                       </Badge>
-                      <Text size="2" color="gray">
+                      <span className="text-sm text-gray-600">
                         {formatTimestamp(error.timestamp)}
-                      </Text>
-                    </Flex>
-                  </Flex>
+                      </span>
+                    </div>
+                  </div>
 
-                  <Text size="2" className="leading-relaxed">
+                  <p className="text-sm leading-relaxed">
                     {error.errorMessage}
-                  </Text>
+                  </p>
 
                   {error.url && (
-                    <Flex align="center" gap="1" className="pt-1">
+                    <div className="flex items-center gap-1 pt-1">
                       <LinkIcon className="size-3 text-gray-500" />
-                      <Text size="1" color="gray" className="break-all">
+                      <span className="text-xs text-gray-600 break-all">
                         {error.url}
-                      </Text>
-                    </Flex>
+                      </span>
+                    </div>
                   )}
                 </div>
               ))}
@@ -277,12 +269,12 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
 
             {recentErrors.length >= 10 && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                <Flex align="center" gap="2" className="text-red-800">
+                <div className="flex items-center gap-2 text-red-800">
                   <WarningIcon className="size-4" />
-                  <Text size="2" weight="medium">
+                  <p className="text-sm font-medium">
                     Company marked as problematic due to high error count
-                  </Text>
-                </Flex>
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -292,21 +284,6 @@ export function ErrorLogTable({ company }: ErrorLogTableProps) {
   );
 }
 
-function getErrorTypeColor(errorType: string): "red" | "orange" | "yellow" {
-  switch (errorType.toLowerCase()) {
-    case "fetch_failed":
-    case "scraping_failed":
-      return "red";
-    case "parse_error":
-    case "job_fetch_failed":
-    case "job_details_failed":
-      return "orange";
-    case "rate_limited":
-      return "yellow";
-    default:
-      return "red";
-  }
-}
 
 function formatErrorType(errorType: string): string {
   return errorType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());

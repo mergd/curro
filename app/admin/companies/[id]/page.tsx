@@ -7,11 +7,21 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { CompanyLogo } from "@/components/ui/company-logo";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
 
+import { ArrowClockwiseIcon, TrashIcon } from "@phosphor-icons/react";
 import {
   ActivityLogIcon,
   ArrowLeftIcon,
@@ -21,12 +31,12 @@ import {
   InfoCircledIcon,
   Pencil1Icon,
 } from "@radix-ui/react-icons";
-import { Card } from "@radix-ui/themes";
-import { useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, use, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { CompanyDetailSkeleton } from "./components/company-detail-skeleton";
 import { CompanyEditForm } from "./components/company-edit-form";
@@ -39,11 +49,81 @@ interface CompanyDetailPageProps {
 
 export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isScrapingInProgress, setIsScrapingInProgress] = useState(false);
+  const [isClearingErrors, setIsClearingErrors] = useState(false);
+  const [isResettingBackoff, setIsResettingBackoff] = useState(false);
+
   const { id } = use(params);
   const company = useQuery(api.companies.get, { id: id as any });
   const jobs = useQuery(api.jobs.findActiveJobsByCompany, {
     companyId: id as any,
   });
+
+  const forceScrape = useAction(api.scraper.scrape);
+  const clearErrors = useMutation(api.companies.clearErrors);
+  const resetBackoff = useMutation(api.companies.resetBackoff);
+
+  const handleForceScrape = async () => {
+    if (!company) return;
+
+    setIsScrapingInProgress(true);
+    try {
+      const result = await forceScrape({
+        companyId: company._id as any,
+      });
+
+      if (result.success) {
+        toast.success(
+          `Scraping initiated for ${company.name}. Jobs will be updated shortly.`,
+        );
+      } else if (result.error?.includes("skipped")) {
+        toast.warning(`Scraping skipped for ${company.name}: ${result.error}`);
+      } else {
+        toast.error(
+          `Failed to initiate scraping for ${company.name}: ${result.error || "Unknown error"}`,
+        );
+      }
+    } catch (error) {
+      console.error("Error initiating scrape:", error);
+      toast.error(
+        `Failed to initiate scraping for ${company.name}. Please try again.`,
+      );
+    } finally {
+      setIsScrapingInProgress(false);
+    }
+  };
+
+  const handleClearErrors = async () => {
+    if (!company) return;
+
+    setIsClearingErrors(true);
+    try {
+      await clearErrors({ id: company._id });
+      toast.success(`Cleared all errors for ${company.name}.`);
+    } catch (error) {
+      console.error("Error clearing errors:", error);
+      toast.error("Failed to clear errors. Please try again.");
+    } finally {
+      setIsClearingErrors(false);
+    }
+  };
+
+  const handleResetBackoff = async () => {
+    if (!company) return;
+
+    setIsResettingBackoff(true);
+    try {
+      await resetBackoff({ id: company._id });
+      toast.success(
+        `Reset backoff for ${company.name}. Scraping can now proceed normally.`,
+      );
+    } catch (error) {
+      console.error("Error resetting backoff:", error);
+      toast.error("Failed to reset backoff. Please try again.");
+    } finally {
+      setIsResettingBackoff(false);
+    }
+  };
 
   const tabItems: TabItem[] = useMemo(
     () => [
@@ -137,6 +217,45 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
                   Job Board
                 </Link>
               </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <GearIcon className="mr-2 size-4" />
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Scraping Actions</DropdownMenuLabel>
+                  <DropdownMenuItem
+                    onClick={handleForceScrape}
+                    disabled={isScrapingInProgress}
+                  >
+                    <ArrowClockwiseIcon
+                      className={`size-4 mr-2 ${isScrapingInProgress ? "animate-spin" : ""}`}
+                    />
+                    {isScrapingInProgress ? "Scraping..." : "Force scrape jobs"}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleClearErrors}
+                    disabled={
+                      isClearingErrors || !company.scrapingErrors?.length
+                    }
+                  >
+                    <TrashIcon className="size-4 mr-2" />
+                    {isClearingErrors ? "Clearing..." : "Clear errors"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={handleResetBackoff}
+                    disabled={isResettingBackoff || !company.backoffInfo?.level}
+                  >
+                    <ArrowClockwiseIcon className="size-4 mr-2" />
+                    {isResettingBackoff ? "Resetting..." : "Reset backoff"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button onClick={() => setIsEditing(true)}>
                 <Pencil1Icon className="mr-2 size-4" />
                 Edit Company
@@ -255,7 +374,7 @@ function EnhancedCompanyInfoCard({ company }: { company: any }) {
               <div className="text-sm font-medium text-muted-foreground mb-1">
                 ATS Type
               </div>
-              <Badge color="blue" className="text-xs">
+              <Badge className="text-xs">
                 {company.sourceType.charAt(0).toUpperCase() +
                   company.sourceType.slice(1)}
               </Badge>
@@ -290,7 +409,7 @@ function EnhancedCompanyInfoCard({ company }: { company: any }) {
                 <div className="text-sm font-medium text-muted-foreground mb-1">
                   Stage
                 </div>
-                <Badge color="purple" className="text-xs">
+                <Badge className="text-xs">
                   {company.stage
                     .replace("-", " ")
                     .replace(/\b\w/g, (l: string) => l.toUpperCase())}
@@ -331,7 +450,7 @@ function EnhancedCompanyInfoCard({ company }: { company: any }) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {company.category.map((cat: string, i: number) => (
-                    <Badge key={i} color="blue" className="text-xs">
+                    <Badge key={i} className="text-xs">
                       {cat.charAt(0).toUpperCase() +
                         cat.slice(1).replace(/-/g, " ")}
                     </Badge>
@@ -347,7 +466,7 @@ function EnhancedCompanyInfoCard({ company }: { company: any }) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {company.subcategory.map((subcat: string, i: number) => (
-                    <Badge key={i} color="purple" className="text-xs">
+                    <Badge key={i} className="text-xs">
                       {subcat.charAt(0).toUpperCase() +
                         subcat.slice(1).replace(/-/g, " ")}
                     </Badge>
@@ -363,7 +482,7 @@ function EnhancedCompanyInfoCard({ company }: { company: any }) {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {company.tags.map((tag: string, i: number) => (
-                    <Badge key={i} color="gray" className="text-xs">
+                    <Badge key={i} className="text-xs">
                       {tag.charAt(0).toUpperCase() +
                         tag.slice(1).replace(/-/g, " ")}
                     </Badge>
