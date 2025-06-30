@@ -3,3 +3,6 @@
 [ ] Build out a more internships focused version of the app
 [ ] pagination broken for tables
 [ ] add lever ATS
+
+
+[ ] Add resend/loops for email flows

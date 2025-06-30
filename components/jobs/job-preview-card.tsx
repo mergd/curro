@@ -3,6 +3,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { CompanyLogo } from "@/components/ui/company-logo";
+import { CompanyPreviewPopover } from "@/components/ui/company-preview-popover";
 
 import { ClockIcon, GlobeIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
@@ -52,15 +53,41 @@ export function JobPreviewCard({ job }: JobPreviewCardProps) {
               <h3 className="font-semibold text-lg line-clamp-2">
                 {job.title}
               </h3>
-              <p className="text-muted-foreground font-medium">
-                {job.company?.name || "Unknown Company"}
-              </p>
+              {job.company ? (
+                <CompanyPreviewPopover
+                  companyId={job.company._id}
+                  side="top"
+                  align="start"
+                >
+                  <button
+                    className="text-muted-foreground font-medium hover:text-foreground transition-colors text-left"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {job.company.name}
+                  </button>
+                </CompanyPreviewPopover>
+              ) : (
+                <p className="text-muted-foreground font-medium">
+                  Unknown Company
+                </p>
+              )}
             </div>
-            <CompanyLogo
-              logoUrl={job.company?.logoUrl}
-              companyName={job.company?.name || "Unknown Company"}
-              size="md"
-            />
+            {job.company && (
+              <CompanyPreviewPopover
+                companyId={job.company._id}
+                side="top"
+                align="end"
+              >
+                <div onClick={(e) => e.preventDefault()}>
+                  <CompanyLogo
+                    logoUrl={job.company?.logoUrl}
+                    companyName={job.company?.name || "Unknown Company"}
+                    size="md"
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  />
+                </div>
+              </CompanyPreviewPopover>
+            )}
           </div>
 
           {/* Details */}

@@ -4,6 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CompanyPreviewPopover } from "@/components/ui/company-preview-popover";
 
 import { ExternalLinkIcon, EyeOpenIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
@@ -24,7 +25,22 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
         <div className="space-y-1">
           <div className="font-medium">{job.title}</div>
           <div className="text-sm text-muted-foreground">
-            {job.company?.name || "Unknown Company"}
+            {job.company ? (
+              <CompanyPreviewPopover
+                companyId={job.company._id}
+                side="right"
+                align="start"
+              >
+                <button
+                  className="hover:text-foreground transition-colors text-left"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  {job.company.name}
+                </button>
+              </CompanyPreviewPopover>
+            ) : (
+              "Unknown Company"
+            )}
           </div>
         </div>
       );

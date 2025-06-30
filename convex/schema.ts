@@ -7,8 +7,6 @@ import {
   APPLICATION_STATUSES,
   COMPANY_CATEGORIES,
   COMPANY_STAGES,
-  COMPANY_SUBCATEGORIES,
-  COMPANY_TAGS,
   COMPENSATION_TYPES,
   createUnionValidator,
   EDUCATION_LEVELS,
@@ -28,6 +26,7 @@ export default defineSchema({
     interests: v.optional(v.array(v.string())),
     fourFacts: v.optional(v.array(v.string())),
     resumeId: v.optional(v.id("resumes")),
+    bookmarkedJobIds: v.optional(v.array(v.id("jobs"))), // Simple array of bookmarked job IDs
   }).index("by_user", ["userId"]),
 
   resumes: defineTable({

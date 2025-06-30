@@ -279,3 +279,25 @@ export const findFailedJobsByCompany = query({
       .collect();
   },
 });
+
+export const listByCompany = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, { companyId }) => {
+    const jobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    const jobsWithCompany = await Promise.all(
+      jobs.map(async (job) => {
+        const company = await ctx.db.get(job.companyId);
+        return { ...job, company };
+      }),
+    );
+
+    return jobsWithCompany;
+  },
+});

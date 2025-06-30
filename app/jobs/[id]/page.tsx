@@ -7,21 +7,35 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CompanyLogo } from "@/components/ui/company-logo";
+import { CompanyPreviewPopover } from "@/components/ui/company-preview-popover";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { api } from "@/convex/_generated/api";
 import { formatSalary, timeAgo } from "@/lib/formatters";
 
 import {
   ArrowLeftIcon,
+  BookmarkFilledIcon,
+  BookmarkIcon,
   CheckIcon,
   ClockIcon,
   ExternalLinkIcon,
   FileTextIcon,
   GlobeIcon,
+  PersonIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
-import { use, useMemo } from "react";
+import { Suspense, use, useMemo, useState } from "react";
 
 interface JobDetailPageProps {
   params: Promise<{
@@ -32,6 +46,12 @@ interface JobDetailPageProps {
 export default function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = use(params);
   const job = useQuery(api.jobs.get, { id: id as Id<"jobs"> });
+  const user = useQuery(api.auth.currentUser);
+  const isBookmarked = useQuery(api.bookmarks.isBookmarked, {
+    jobId: id as Id<"jobs">,
+  });
+  const addBookmark = useMutation(api.bookmarks.add);
+  const removeBookmark = useMutation(api.bookmarks.remove);
 
   const hasEmbeddableATS = useMemo(() => {
     if (!job?.company?.sourceType) return false;
@@ -40,6 +60,20 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
       job.company.sourceType === "ashby"
     );
   }, [job?.company?.sourceType]);
+
+  const handleBookmarkToggle = async () => {
+    if (!job) return;
+
+    try {
+      if (isBookmarked) {
+        await removeBookmark({ jobId: job._id });
+      } else {
+        await addBookmark({ jobId: job._id });
+      }
+    } catch (error) {
+      console.error("Error toggling bookmark:", error);
+    }
+  };
 
   const tabItems: TabItem[] = useMemo(() => {
     const items: TabItem[] = [
@@ -60,8 +94,15 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
       });
     }
 
+    // Track Application tab
+    items.push({
+      value: "track",
+      label: "Track Application",
+      icon: <PersonIcon className="size-4" />,
+    });
+
     return items;
-  }, [hasEmbeddableATS, job?.company?.sourceType]);
+  }, [hasEmbeddableATS, job?.company?.sourceType, user]);
 
   if (!job) {
     return (
@@ -74,6 +115,165 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
             <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  function TrackApplicationContent({ jobId }: { jobId: string }) {
+    const existingApplication = useQuery(api.applications.listByUser, {})?.find(
+      (app) => app.jobId === jobId,
+    );
+    const addApplication = useMutation(api.applications.add);
+    const updateApplication = useMutation(api.applications.update);
+
+    const [status, setStatus] = useState(
+      existingApplication?.status || "applied",
+    );
+    const [notes, setNotes] = useState(existingApplication?.notes || "");
+    const [isSaving, setIsSaving] = useState(false);
+
+    const applicationStatuses = [
+      { value: "applied", label: "Applied" },
+      { value: "screening", label: "Screening" },
+      { value: "interviewing", label: "Interviewing" },
+      { value: "offered", label: "Offered" },
+      { value: "hired", label: "Hired" },
+      { value: "rejected", label: "Rejected" },
+      { value: "withdrawn", label: "Withdrawn" },
+    ];
+
+    const handleSave = async () => {
+      setIsSaving(true);
+      try {
+        if (existingApplication) {
+          await updateApplication({
+            applicationId: existingApplication._id,
+            status: status as any,
+            notes: notes || undefined,
+          });
+        } else {
+          await addApplication({
+            jobId: jobId as any,
+            status: status as any,
+            appliedAt: Date.now(),
+            notes: notes || undefined,
+          });
+        }
+      } catch (error) {
+        console.error("Error saving application:", error);
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
+    const getStatusColor = (statusValue: string) => {
+      switch (statusValue) {
+        case "applied":
+          return "blue";
+        case "screening":
+          return "yellow";
+        case "interviewing":
+          return "purple";
+        case "offered":
+          return "green";
+        case "hired":
+          return "green";
+        case "rejected":
+          return "red";
+        case "withdrawn":
+          return "gray";
+        default:
+          return "default";
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-semibold mb-2">
+            Track Application Status
+          </h2>
+          <p className="text-muted-foreground">
+            Update your application status and add notes to keep track of your
+            progress.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="status">Application Status</Label>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger>
+                <SelectValue>
+                  {applicationStatuses.find((s) => s.value === status)?.label}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {applicationStatuses.map((statusOption) => (
+                  <SelectItem
+                    key={statusOption.value}
+                    value={statusOption.value}
+                  >
+                    {statusOption.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes</Label>
+            <Textarea
+              id="notes"
+              placeholder="Add notes about your application, interview feedback, follow-up actions, etc."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving
+                ? "Saving..."
+                : existingApplication
+                  ? "Update Application"
+                  : "Save Application"}
+            </Button>
+            {existingApplication && (
+              <Button variant="outline" asChild>
+                <Link href="/dashboard?tab=applications">
+                  View in Dashboard
+                </Link>
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {existingApplication && (
+          <div className="pt-4 border-t">
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>
+                Applied:{" "}
+                {existingApplication.appliedAt
+                  ? new Date(existingApplication.appliedAt).toLocaleDateString()
+                  : "Not specified"}
+              </p>
+              <p>
+                Last Updated:{" "}
+                {new Date(existingApplication.lastUpdated).toLocaleDateString()}
+              </p>
+              {existingApplication.applicationMethod && (
+                <p>
+                  Method:{" "}
+                  {existingApplication.applicationMethod
+                    .replace("-", " ")
+                    .replace(/\b\w/g, (l) => l.toUpperCase())}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -96,11 +296,38 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
             {/* Job Header */}
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <h1 className="text-3xl font-bold">{job.title}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-bold">{job.title}</h1>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBookmarkToggle}
+                    className="flex items-center gap-2"
+                  >
+                    {isBookmarked ? (
+                      <BookmarkFilledIcon className="size-4" />
+                    ) : (
+                      <BookmarkIcon className="size-4" />
+                    )}
+                    {isBookmarked ? "Bookmarked" : "Bookmark"}
+                  </Button>
+                </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl text-muted-foreground">
-                    {job.company?.name || "Unknown Company"}
-                  </span>
+                  {job.company ? (
+                    <CompanyPreviewPopover
+                      companyId={job.company._id}
+                      side="bottom"
+                      align="start"
+                    >
+                      <button className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left">
+                        {job.company.name}
+                      </button>
+                    </CompanyPreviewPopover>
+                  ) : (
+                    <span className="text-xl text-muted-foreground">
+                      Unknown Company
+                    </span>
+                  )}
                   {job.company?.website && (
                     <Link
                       href={job.company.website}
@@ -113,11 +340,28 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                   )}
                 </div>
               </div>
-              <CompanyLogo
-                logoUrl={job.company?.logoUrl}
-                companyName={job.company?.name || "Unknown Company"}
-                size="lg"
-              />
+              {job.company ? (
+                <CompanyPreviewPopover
+                  companyId={job.company._id}
+                  side="bottom"
+                  align="end"
+                >
+                  <div>
+                    <CompanyLogo
+                      logoUrl={job.company?.logoUrl}
+                      companyName={job.company?.name || "Unknown Company"}
+                      size="lg"
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                    />
+                  </div>
+                </CompanyPreviewPopover>
+              ) : (
+                <CompanyLogo
+                  logoUrl={undefined}
+                  companyName="Unknown Company"
+                  size="lg"
+                />
+              )}
             </div>
 
             {/* Job Meta */}
@@ -207,23 +451,9 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                     </div>
                   </div>
                 )}
-
-                {/* Apply Button */}
-                <div className="pt-6">
-                  <Button asChild size="lg" className="">
-                    <Link
-                      href={job.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Apply Now
-                      <ExternalLinkIcon className="ml-2 size-4" />
-                    </Link>
-                  </Button>
-                </div>
               </TabsContent>
 
-              {hasEmbeddableATS && job.company?.sourceType && (
+              {hasEmbeddableATS && job.company?.sourceType ? (
                 <TabsContent value="apply" className="space-y-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
@@ -262,7 +492,60 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                     </div>
                   </div>
                 </TabsContent>
+              ) : (
+                <TabsContent value="apply" className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="text-center py-12">
+                      <h2 className="text-xl font-semibold mb-2">
+                        Apply to this position
+                      </h2>
+                      <p className="text-muted-foreground mb-6">
+                        This company&apos;s application system is not supported
+                        for inline applications. Click the button below to apply
+                        on their website.
+                      </p>
+                      <Button asChild size="lg">
+                        <Link
+                          href={job.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open in New Tab & Apply Now
+                          <ExternalLinkIcon className="ml-2 size-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
               )}
+
+              <TabsContent value="track" className="space-y-4">
+                {user ? (
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <TrackApplicationContent jobId={job._id} />
+                  </Suspense>
+                ) : (
+                  <TooltipProvider>
+                    <div className="space-y-4">
+                      <div className="text-center py-12">
+                        <PersonIcon className="size-12 text-muted-foreground mx-auto mb-4" />
+                        <h2 className="text-xl font-semibold mb-2 text-muted-foreground">
+                          Track Your Application
+                        </h2>
+                        <p className="text-muted-foreground mb-6">
+                          Please sign in to track your job applications and
+                          manage your job search progress.
+                        </p>
+                        <Button asChild>
+                          <Link href="/auth">
+                            Sign In to Track Applications
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </TooltipProvider>
+                )}
+              </TabsContent>
             </Tabs>
           </div>
         </Card>

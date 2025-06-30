@@ -3,6 +3,7 @@
 import type { TabItem } from "@/components/ui/tabs";
 
 import { columns } from "@/app/admin/components/companies-columns";
+import { bookmarksColumns } from "@/app/dashboard/components/bookmarks-columns";
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
@@ -13,18 +14,20 @@ import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
 
 import {
+  BookmarkIcon,
   DashboardIcon,
   ExclamationTriangleIcon,
   GearIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 
 export default function AdminPage() {
   const errorStats = useQuery(api.companies.getErrorStats);
+  const bookmarkStats = useQuery(api.bookmarks.getStats);
 
   const tabItems: TabItem[] = useMemo(
     () => [
@@ -45,6 +48,19 @@ export default function AdminPage() {
           : undefined,
       },
       {
+        value: "bookmarks",
+        label: "Job Bookmarks",
+        icon: <BookmarkIcon className="size-4" />,
+        badge: bookmarkStats
+          ? {
+              count: bookmarkStats.total,
+              variant: "default",
+            }
+          : {
+              loading: true,
+            },
+      },
+      {
         value: "errors",
         label: "Error Monitor",
         icon: <ExclamationTriangleIcon className="size-4" />,
@@ -61,7 +77,7 @@ export default function AdminPage() {
             },
       },
     ],
-    [errorStats],
+    [errorStats, bookmarkStats],
   );
 
   return (
@@ -116,6 +132,19 @@ export default function AdminPage() {
 
             <Suspense fallback={<DataTableSkeleton columnCount={7} />}>
               <CompaniesTable />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="bookmarks" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold mb-2">Job Bookmarks</h2>
+              <p className="text-muted-foreground">
+                Track and manage your bookmarked job opportunities
+              </p>
+            </div>
+
+            <Suspense fallback={<DataTableSkeleton columnCount={6} />}>
+              <BookmarksTable />
             </Suspense>
           </TabsContent>
 
@@ -334,6 +363,66 @@ function CompaniesTable() {
     <DataTable
       table={table}
       onRowClick={(row) => router.push(`/admin/companies/${row.original._id}`)}
+    >
+      <DataTableToolbar table={table} />
+    </DataTable>
+  );
+}
+
+function BookmarksTable() {
+  const bookmarkedJobs = useQuery(api.bookmarks.listByUser);
+  const removeBookmark = useMutation(api.bookmarks.remove);
+  const router = useRouter();
+
+  // Handle bookmark removal events
+  useEffect(() => {
+    const handleRemoveBookmark = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      try {
+        await removeBookmark({ jobId: customEvent.detail.jobId });
+      } catch (error) {
+        console.error("Error removing bookmark:", error);
+      }
+    };
+
+    window.addEventListener("removeBookmark", handleRemoveBookmark);
+    return () => {
+      window.removeEventListener("removeBookmark", handleRemoveBookmark);
+    };
+  }, [removeBookmark]);
+
+  const { table } = useDataTable({
+    data: bookmarkedJobs || [],
+    columns: bookmarksColumns,
+    pageCount: Math.ceil((bookmarkedJobs?.length || 0) / 10),
+    initialState: {
+      sorting: [{ id: "_creationTime", desc: true }],
+      pagination: { pageIndex: 0, pageSize: 10 },
+    },
+  });
+
+  if (!bookmarkedJobs) {
+    return <DataTableSkeleton columnCount={6} />;
+  }
+
+  if (bookmarkedJobs.length === 0) {
+    return (
+      <Card className="p-8">
+        <div className="text-center">
+          <BookmarkIcon className="size-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No Bookmarks Yet</h3>
+          <p className="text-muted-foreground">
+            Start bookmarking jobs you&apos;re interested in to track them here.
+          </p>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <DataTable
+      table={table}
+      onRowClick={(row) => router.push(`/jobs/${row.original._id}`)}
     >
       <DataTableToolbar table={table} />
     </DataTable>
