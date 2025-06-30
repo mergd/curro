@@ -1,7 +1,14 @@
 import { v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
-import { COMPENSATION_TYPES } from "./constants";
+import {
+  COMPENSATION_TYPES,
+  createUnionValidator,
+  EDUCATION_LEVELS,
+  EMPLOYMENT_TYPES,
+  REMOTE_OPTIONS,
+  ROLE_TYPES,
+} from "./constants";
 
 export const get = query({
   args: { id: v.id("jobs") },
@@ -20,7 +27,7 @@ export const list = query({
     const jobs = await ctx.db
       .query("jobs")
       .filter((q) => q.eq(q.field("deletedAt"), undefined))
-      .collect();
+      .take(20);
 
     const jobsWithCompany = await Promise.all(
       jobs.map(async (job) => {
@@ -34,8 +41,15 @@ export const list = query({
 });
 
 export const listAll = query({
-  args: { includeDeleted: v.optional(v.boolean()) },
-  handler: async (ctx, { includeDeleted = false }) => {
+  args: {
+    includeDeleted: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { includeDeleted = false, limit = 20 }) => {
+    if (limit) {
+      limit = Math.min(limit, 20);
+    }
+
     let jobsQuery = ctx.db.query("jobs");
 
     if (!includeDeleted) {
@@ -44,7 +58,7 @@ export const listAll = query({
       );
     }
 
-    const jobs = await jobsQuery.collect();
+    const jobs = await jobsQuery.take(limit);
 
     const jobsWithCompany = await Promise.all(
       jobs.map(async (job) => {
@@ -65,41 +79,16 @@ export const add = mutation({
     url: v.string(),
     locations: v.optional(v.array(v.string())),
     source: v.optional(v.string()),
-    educationLevel: v.optional(
-      v.union(
-        v.literal("high-school"),
-        v.literal("associates"),
-        v.literal("bachelors"),
-        v.literal("masters"),
-        v.literal("phd"),
-        v.literal("bootcamp"),
-        v.literal("self-taught"),
-        v.literal("no-requirement"),
-      ),
-    ),
+    educationLevel: v.optional(createUnionValidator(EDUCATION_LEVELS)),
     yearsOfExperience: v.optional(
       v.object({
         min: v.number(),
         max: v.optional(v.number()),
       }),
     ),
-    roleType: v.optional(
-      v.union(
-        v.literal("software-engineering"),
-        v.literal("data-science"),
-        v.literal("product-management"),
-        v.literal("design"),
-        v.literal("marketing"),
-        v.literal("sales"),
-        v.literal("operations"),
-        v.literal("finance"),
-        v.literal("hr"),
-        v.literal("legal"),
-        v.literal("customer-success"),
-        v.literal("business-development"),
-        v.literal("general-apply"),
-      ),
-    ),
+    roleType: v.optional(createUnionValidator(ROLE_TYPES)),
+    roleSubcategory: v.optional(v.string()),
+    employmentType: v.optional(createUnionValidator(EMPLOYMENT_TYPES)),
     isInternship: v.optional(v.boolean()),
     internshipRequirements: v.optional(
       v.object({
@@ -121,9 +110,8 @@ export const add = mutation({
         ),
       ),
     ),
-    remoteOptions: v.optional(
-      v.union(v.literal("on-site"), v.literal("remote"), v.literal("hybrid")),
-    ),
+    remoteOptions: v.optional(createUnionValidator(REMOTE_OPTIONS)),
+    remoteTimezonePreferences: v.optional(v.array(v.string())),
     equity: v.optional(
       v.object({
         offered: v.boolean(),
@@ -131,6 +119,8 @@ export const add = mutation({
         details: v.optional(v.string()),
       }),
     ),
+    isFetched: v.optional(v.boolean()),
+    firstSeenAt: v.optional(v.number()),
     lastScraped: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -154,41 +144,16 @@ export const update = mutation({
     title: v.optional(v.string()),
     description: v.optional(v.string()),
     locations: v.optional(v.array(v.string())),
-    educationLevel: v.optional(
-      v.union(
-        v.literal("high-school"),
-        v.literal("associates"),
-        v.literal("bachelors"),
-        v.literal("masters"),
-        v.literal("phd"),
-        v.literal("bootcamp"),
-        v.literal("self-taught"),
-        v.literal("no-requirement"),
-      ),
-    ),
+    educationLevel: v.optional(createUnionValidator(EDUCATION_LEVELS)),
     yearsOfExperience: v.optional(
       v.object({
         min: v.number(),
         max: v.optional(v.number()),
       }),
     ),
-    roleType: v.optional(
-      v.union(
-        v.literal("software-engineering"),
-        v.literal("data-science"),
-        v.literal("product-management"),
-        v.literal("design"),
-        v.literal("marketing"),
-        v.literal("sales"),
-        v.literal("operations"),
-        v.literal("finance"),
-        v.literal("hr"),
-        v.literal("legal"),
-        v.literal("customer-success"),
-        v.literal("business-development"),
-        v.literal("general-apply"),
-      ),
-    ),
+    roleType: v.optional(createUnionValidator(ROLE_TYPES)),
+    roleSubcategory: v.optional(v.string()),
+    employmentType: v.optional(createUnionValidator(EMPLOYMENT_TYPES)),
     isInternship: v.optional(v.boolean()),
     internshipRequirements: v.optional(
       v.object({
@@ -210,9 +175,8 @@ export const update = mutation({
         ),
       ),
     ),
-    remoteOptions: v.optional(
-      v.union(v.literal("on-site"), v.literal("remote"), v.literal("hybrid")),
-    ),
+    remoteOptions: v.optional(createUnionValidator(REMOTE_OPTIONS)),
+    remoteTimezonePreferences: v.optional(v.array(v.string())),
     equity: v.optional(
       v.object({
         offered: v.boolean(),
@@ -221,6 +185,7 @@ export const update = mutation({
       }),
     ),
     lastScraped: v.optional(v.number()),
+    isFetched: v.optional(v.boolean()),
     deletedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -291,5 +256,26 @@ export const findActiveJobUrlsByCompany = query({
       .collect();
 
     return jobs.map((job) => job.url);
+  },
+});
+
+export const findFailedJobsByCompany = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, { companyId }) => {
+    return await ctx.db
+      .query("jobs")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("deletedAt"), undefined),
+          q.or(
+            q.eq(q.field("isFetched"), false),
+            q.eq(q.field("isFetched"), undefined),
+          ),
+        ),
+      )
+      .collect();
   },
 });

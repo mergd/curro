@@ -1,7 +1,3 @@
-"use node";
-
-import type { BackoffInfo, ErrorInfo } from "./utils/backoff";
-
 import { v } from "convex/values";
 
 import { api, internal } from "./_generated/api";
@@ -90,25 +86,6 @@ async function shouldSkipCompanyDueToBackoff(
     const reason = getBackoffStatusDescription(company.backoffInfo);
     console.log(`Skipping company ${companyId} due to backoff: ${reason}`);
     return { shouldSkip: true, reason };
-  }
-
-  // Legacy check: also check old error-based logic as fallback
-  if (company.scrapingErrors) {
-    const now = Date.now();
-    const cutoffTime = now - TWENTY_FOUR_HOURS_MS;
-    const recentErrors = company.scrapingErrors.filter(
-      (error: any) => error.timestamp > cutoffTime,
-    );
-
-    if (recentErrors.length >= MAX_ERRORS_PER_24H) {
-      console.log(
-        `Skipping company ${companyId} due to ${recentErrors.length} errors in the last 24 hours (legacy check)`,
-      );
-      return {
-        shouldSkip: true,
-        reason: `${recentErrors.length} errors in 24h`,
-      };
-    }
   }
 
   return { shouldSkip: false };
@@ -213,7 +190,38 @@ export const fetchAndParseJobs = internalAction({
       );
       await new Promise((resolve) => setTimeout(resolve, JOB_BOARD_DELAY_MS));
 
-      // 2. Fetch the job board page using simple HTTP request
+      // 2. Fetch the job board page - use enhanced fetching for Ashby
+      let html: string;
+      let fetchMethod = "simple";
+
+      // if (sourceType === "ashby") {
+      //   // Ashby often requires JavaScript rendering, try enhanced fetch
+      //   const { smartFetch } = await import("./adapters/utils");
+      //   const result = await smartFetch(jobBoardUrl, {
+      //     fallbackToCrawlee: true,
+      //     crawleeOptions: {
+      //       waitForSelector: '[data-testid="job-board"]',
+      //       timeout: 10000,
+      //     },
+      //   });
+
+      //   if (!result.success) {
+      //     const errorMsg = result.error || "Enhanced fetch failed";
+      //     await addCompanyError(
+      //       ctx,
+      //       companyId,
+      //       "fetch_failed",
+      //       errorMsg,
+      //       jobBoardUrl,
+      //     );
+      //     throw new Error(errorMsg);
+      //   }
+
+      //   html = result.html;
+      //   fetchMethod = result.method;
+      //   console.log(`Ashby page fetched using: ${fetchMethod}`);
+      // } else {
+      // Use simple fetch for other sources
       const response = await fetch(jobBoardUrl, {
         headers: {
           "User-Agent":
@@ -233,7 +241,8 @@ export const fetchAndParseJobs = internalAction({
         throw new Error(errorMsg);
       }
 
-      const html = await response.text();
+      html = await response.text();
+      // }
       console.log("HTML fetched, length:", html.length);
       console.log("HTML:", html.slice(0, 20000));
 
@@ -243,20 +252,20 @@ export const fetchAndParseJobs = internalAction({
 
       if (sourceType === "ashby") {
         const adapter = new AshbyAdapter();
-        links = adapter.extractJobLinks(html, jobBoardUrl);
+        links = await adapter.extractJobLinks(html, jobBoardUrl);
       } else if (sourceType === "greenhouse") {
         const adapter = new GreenhouseAdapter();
-        links = adapter.extractJobLinks(html, jobBoardUrl);
+        links = await adapter.extractJobLinks(html, jobBoardUrl);
       } else {
         const adapter = new GenericAdapter();
-        links = await adapter.extractJobLinksAsync(html, jobBoardUrl);
+        links = await adapter.extractJobLinks(html, jobBoardUrl);
         atsType = "other";
       }
 
       const totalFound = links.length;
 
       console.log(
-        `Using ${sourceType} adapter, found ${totalFound} jobs for company ${companyId}`,
+        `Using ${sourceType} adapter (${fetchMethod}), found ${totalFound} jobs for company ${companyId}`,
       );
 
       // 4. Process jobs with deduplication
@@ -318,6 +327,8 @@ export const fetchAndParseJobs = internalAction({
             description: "",
             url: absoluteUrl,
             source: `${atsType}-scraper`,
+            firstSeenAt: now,
+            isFetched: false,
             lastScraped: now,
           });
           newJobsCount++;
@@ -448,10 +459,18 @@ export const fetchJobDetails = internalAction({
         if (Object.keys(updateableFields).length > 0) {
           await ctx.runMutation(api.jobs.update, {
             id: jobId,
+            isFetched: true,
             ...updateableFields,
           });
           console.log(`Enhanced job details for: ${jobUrl}`);
         }
+      } else {
+        // Even if no details were parsed, mark as fetched to avoid reprocessing
+        await ctx.runMutation(api.jobs.update, {
+          id: jobId,
+          isFetched: true,
+        });
+        console.log(`No details parsed but marked as fetched: ${jobUrl}`);
       }
 
       return { success: true };
@@ -503,5 +522,139 @@ export const scrapeAllCompanies = internalAction({
       success: true,
       companiesScheduled: companies.length,
     };
+  },
+});
+
+export const retryFailedJob = action({
+  args: {
+    jobId: v.id("jobs"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, { jobId }) => {
+    const job = await ctx.runQuery(api.jobs.get, { id: jobId });
+    if (!job) {
+      return {
+        success: false,
+        error: "Job not found",
+      };
+    }
+
+    try {
+      // Schedule job details fetching
+      await ctx.scheduler.runAfter(
+        0, // Run immediately
+        internal.scraper.fetchJobDetails,
+        {
+          jobId,
+          jobUrl: job.url,
+        },
+      );
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  },
+});
+
+export const retryFailedJobsForCompany = action({
+  args: {
+    companyId: v.id("companies"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    retriedCount: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, { companyId }) => {
+    try {
+      // Get all jobs for the company that haven't been fetched successfully
+      const jobs = await ctx.runQuery(api.jobs.findActiveJobsByCompany, {
+        companyId,
+      });
+
+      const failedJobs = jobs.filter((job) => !job.isFetched);
+
+      let retriedCount = 0;
+      for (const job of failedJobs) {
+        try {
+          // Schedule job details fetching with a small delay between each
+          await ctx.scheduler.runAfter(
+            retriedCount * 500, // Stagger by 500ms each
+            internal.scraper.fetchJobDetails,
+            {
+              jobId: job._id,
+              jobUrl: job.url,
+            },
+          );
+          retriedCount++;
+        } catch (error) {
+          console.error(`Failed to retry job ${job._id}:`, error);
+        }
+      }
+
+      return {
+        success: true,
+        retriedCount,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        retriedCount: 0,
+        error: errorMessage,
+      };
+    }
+  },
+});
+
+export const clearCompanyErrors = action({
+  args: {
+    companyId: v.id("companies"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, { companyId }) => {
+    try {
+      const company = await ctx.runQuery(api.companies.get, { id: companyId });
+      if (!company) {
+        return {
+          success: false,
+          error: "Company not found",
+        };
+      }
+
+      // Clear errors and reset backoff
+      await ctx.runMutation(api.companies.update, {
+        id: companyId,
+        scrapingErrors: [],
+        backoffInfo: {
+          level: 0,
+          nextAllowedScrape: Date.now(),
+          consecutiveFailures: 0,
+          totalFailures: 0,
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   },
 });

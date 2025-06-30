@@ -17,7 +17,7 @@ export default function HomePage() {
           <div className="space-y-4">
             <h1 className="text-5xl font-bold tracking-tight">
               Find Your Next{" "}
-              <span className="bg-linear-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r bg-clip-text text-transparent">
                 Dream Job
               </span>
             </h1>
@@ -61,7 +61,7 @@ export default function HomePage() {
                 Fresh job postings from top companies
               </p>
             </div>
-            <Button asChild variant="outline" className="cursor-pointer">
+            <Button asChild variant="outline" className="">
               <Link href="/jobs">
                 View All Jobs
                 <ArrowRightIcon className="ml-2 size-4" />
@@ -83,15 +83,10 @@ export default function HomePage() {
             Join thousands of professionals finding their perfect role
           </p>
           <div className="flex gap-4 justify-center">
-            <Button asChild size="lg" className="cursor-pointer">
+            <Button asChild size="lg" className="">
               <Link href="/jobs">Browse All Jobs</Link>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="cursor-pointer"
-            >
+            <Button asChild variant="outline" size="lg" className="">
               <Link href="/dashboard">Create Profile</Link>
             </Button>
           </div>

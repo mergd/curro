@@ -58,6 +58,15 @@ export const list = query({
           }),
         ),
       ),
+      backoffInfo: v.optional(
+        v.object({
+          level: v.number(),
+          nextAllowedScrape: v.number(),
+          consecutiveFailures: v.number(),
+          lastSuccessfulScrape: v.optional(v.number()),
+          totalFailures: v.number(),
+        }),
+      ),
     }),
   ),
   handler: async (ctx) => {

@@ -143,7 +143,7 @@ function CompanyActionsCell({ company }: { company: Company }) {
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem
           onClick={() => navigator.clipboard.writeText(company._id)}
-          className="cursor-pointer"
+          className=""
         >
           Copy company ID
         </DropdownMenuItem>
@@ -151,19 +151,15 @@ function CompanyActionsCell({ company }: { company: Company }) {
         <DropdownMenuItem
           onClick={handleForceScrape}
           disabled={isScrapingInProgress}
-          className="cursor-pointer"
+          className=""
         >
           <ArrowClockwiseIcon
             className={`size-4 mr-2 ${isScrapingInProgress ? "animate-spin" : ""}`}
           />
           {isScrapingInProgress ? "Scraping..." : "Force scrape jobs"}
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          View details
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
-          Edit company
-        </DropdownMenuItem>
+        <DropdownMenuItem className="">View details</DropdownMenuItem>
+        <DropdownMenuItem className="">Edit company</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

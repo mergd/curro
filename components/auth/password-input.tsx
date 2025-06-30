@@ -24,7 +24,7 @@ const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputProps>(
             size="1"
             onClick={togglePasswordVisibility}
             disabled={props.disabled}
-            className="cursor-pointer"
+            className=""
           >
             {showPassword ? (
               <EyeSlashIcon className="size-4" aria-hidden="true" />

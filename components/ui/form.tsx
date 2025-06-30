@@ -94,7 +94,7 @@ function FormLabel({
   const { error, formItemId } = useFormField();
 
   return (
-    <div className="block -mb-1">
+    <div className="block -mb-1 items-center flex ">
       <Label
         data-slot="form-label"
         data-error={!!error}
@@ -102,7 +102,7 @@ function FormLabel({
         htmlFor={formItemId}
         {...props}
       />
-      {required && <span className="text-destructive">*</span>}
+      {required && <span className="text-destructive ml-1">*</span>}
     </div>
   );
 }

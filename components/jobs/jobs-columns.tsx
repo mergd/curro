@@ -220,12 +220,12 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
       const job = row.original;
       return (
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm" className="cursor-pointer">
+          <Button asChild variant="ghost" size="sm" className="">
             <Link href={`/jobs/${job._id}`}>
               <EyeOpenIcon className="size-4" />
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="cursor-pointer">
+          <Button asChild variant="ghost" size="sm" className="">
             <Link href={job.url} target="_blank" rel="noopener noreferrer">
               <ExternalLinkIcon className="size-4" />
             </Link>

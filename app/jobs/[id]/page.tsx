@@ -49,7 +49,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="sm" className="cursor-pointer">
+          <Button asChild variant="ghost" size="sm" className="">
             <Link href="/jobs">
               <ArrowLeftIcon className="size-4 mr-2" />
               Back to Jobs
@@ -163,7 +163,7 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
             {/* Apply Button */}
             <div className="pt-6">
-              <Button asChild size="lg" className="cursor-pointer">
+              <Button asChild size="lg" className="">
                 <Link href={job.url} target="_blank" rel="noopener noreferrer">
                   Apply Now
                   <ExternalLinkIcon className="ml-2 size-4" />

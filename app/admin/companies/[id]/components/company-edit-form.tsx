@@ -228,12 +228,7 @@ export function CompanyEditForm({
     <div className="container max-w-4xl mx-auto py-8 space-y-8">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onCancel}
-          className="cursor-pointer"
-        >
+        <Button variant="outline" size="sm" onClick={onCancel} className="">
           <ArrowLeftIcon className="size-4 mr-2" />
           Back
         </Button>
@@ -349,6 +344,7 @@ export function CompanyEditForm({
                         <FormItem>
                           <FormLabel>ATS Type</FormLabel>
                           <Select
+                            defaultValue={SOURCE_TYPES[0]}
                             onValueChange={field.onChange}
                             value={field.value}
                           >
@@ -726,14 +722,14 @@ export function CompanyEditForm({
               type="button"
               variant="outline"
               onClick={onCancel}
-              className="cursor-pointer"
+              className=""
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="cursor-pointer"
+              className=""
             >
               {form.formState.isSubmitting ? "Saving..." : "Save Changes"}
             </Button>

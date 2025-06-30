@@ -14,7 +14,6 @@ import type * as adapters_base from "../adapters/base.js";
 import type * as adapters_generic from "../adapters/generic.js";
 import type * as adapters_greenhouse from "../adapters/greenhouse.js";
 import type * as adapters_types from "../adapters/types.js";
-import type * as adapters_utils from "../adapters/utils.js";
 import type * as auth from "../auth.js";
 import type * as companies from "../companies.js";
 import type * as constants from "../constants.js";
@@ -49,7 +48,6 @@ declare const fullApi: ApiFromModules<{
   "adapters/generic": typeof adapters_generic;
   "adapters/greenhouse": typeof adapters_greenhouse;
   "adapters/types": typeof adapters_types;
-  "adapters/utils": typeof adapters_utils;
   auth: typeof auth;
   companies: typeof companies;
   constants: typeof constants;

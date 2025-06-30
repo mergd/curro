@@ -10,14 +10,14 @@ const ParsedJobSchema = z.object({
   locations: z.array(z.string()).optional(), // Format: "City, XXX" (3-char country code)
   educationLevel: z
     .enum([
-      "high-school",
-      "associates",
-      "bachelors",
-      "masters",
-      "phd",
-      "bootcamp",
-      "self-taught",
-      "no-requirement",
+      "High School",
+      "Associates",
+      "Bachelors",
+      "Masters",
+      "PhD",
+      "Bootcamp",
+      "Self-Taught",
+      "No Requirement",
     ])
     .optional(),
   yearsOfExperience: z
@@ -28,32 +28,32 @@ const ParsedJobSchema = z.object({
     .optional(),
   roleType: z
     .enum([
-      "software-engineering",
-      "data-science",
-      "product-management",
-      "design",
-      "marketing",
-      "sales",
-      "operations",
-      "finance",
-      "hr",
-      "legal",
-      "customer-success",
-      "business-development",
-      "general-apply",
+      "Software Engineering",
+      "Data Science",
+      "Product Management",
+      "Design",
+      "Marketing",
+      "Sales",
+      "Operations",
+      "Finance",
+      "HR",
+      "Legal",
+      "Customer Success",
+      "Business Development",
+      "General Apply",
     ])
     .optional(),
   roleSubcategory: z.string().optional(), // e.g., "fullstack", "backend", "frontend", "mobile", "devops", "ml-engineer", etc.
   employmentType: z
     .enum([
-      "permanent",
-      "contract",
-      "part-time",
-      "temporary",
-      "freelance",
-      "internship",
+      "Permanent",
+      "Contract",
+      "Part-Time",
+      "Temporary",
+      "Freelance",
+      "Internship",
     ])
-    .default("permanent")
+    .default("Permanent")
     .optional(),
   internshipRequirements: z
     .object({
@@ -94,7 +94,7 @@ const ParsedJobSchema = z.object({
     ])
     .optional(),
 
-  remoteOptions: z.enum(["on-site", "remote", "hybrid"]).optional(),
+  remoteOptions: z.enum(["On-Site", "Remote", "Hybrid"]).optional(),
   remoteTimezonePreferences: z.array(z.string()).optional(), // e.g., ["CEST", "PST", "EST"]
   equity: z
     .object({
@@ -154,15 +154,15 @@ export async function parseJobDetails(
 
     const prompt = `Extract detailed job information from this job posting HTML. Look for:
 
-1. **Education Requirements**: Look for mentions of degree requirements (high school, bachelor's, master's, PhD, bootcamp, self-taught, or no requirements)
+1. **Education Requirements**: Look for mentions of degree requirements. Use proper case format: "High School", "Associates", "Bachelors", "Masters", "PhD", "Bootcamp", "Self-Taught", or "No Requirement"
 2. **Experience**: Extract years of experience required (e.g., "2-5 years", "3+ years")
-3. **Role Type**: Categorize the role (software engineering, data science, product management, design, marketing, sales, operations, finance, HR, legal, customer success, business development, or general apply)
+3. **Role Type**: Categorize the role using proper case format: "Software Engineering", "Data Science", "Product Management", "Design", "Marketing", "Sales", "Operations", "Finance", "HR", "Legal", "Customer Success", "Business Development", or "General Apply"
 4. **Role Subcategory**: For software engineering roles, specify subcategory like "fullstack", "backend", "frontend", "mobile", "devops", "ml-engineer", "security", "platform", etc. For other roles, use relevant subcategories.
-5. **Employment Type**: Determine if this is "permanent" (default), "contract", "part-time", "temporary", "freelance", or "internship"
-6. **Internship Requirements**: If employment type is "internship", extract any graduation requirements
+5. **Employment Type**: Determine the employment type using proper case format: "Permanent" (default), "Contract", "Part-Time", "Temporary", "Freelance", or "Internship"
+6. **Internship Requirements**: If employment type is "Internship", extract any graduation requirements
 7. **Location**: Extract all mentioned locations in the format "City, XXX" where XXX is the 3-character country code (e.g., "San Francisco, USA", "London, GBR", "Berlin, DEU"). Normalize city names (SF → San Francisco, NYC → New York City).
 8. **Compensation**: Look for salary information and categorize as annual, hourly, weekly, or monthly. Extract min/max ranges and currency.
-9. **Remote Work**: Determine if the position is on-site, remote, or hybrid
+9. **Remote Work**: Determine if the position is using proper case format: "On-Site", "Remote", or "Hybrid"
 10. **Remote Timezone Preferences**: If remote/hybrid, look for timezone preferences. Convert regions to common timezone abbreviations (Europe → CEST, US East Coast → EST, US West Coast → PST, etc.)
 11. **Equity**: Look for mentions of stock options, equity, ownership percentage, or equity compensation
 12. **Additional Requirements**: Any other important requirements that don't fit the structured fields

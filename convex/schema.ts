@@ -100,6 +100,12 @@ export default defineSchema({
     parsedRequirements: v.optional(v.string()),
     source: v.optional(v.string()), // e.g., Ashby, Greenhouse
 
+    // Tracking when we first discovered this job posting
+    firstSeenAt: v.optional(v.number()), // Timestamp when this job was first discovered during scraping (optional for backwards compatibility)
+
+    // Track whether job details have been fully fetched and parsed
+    isFetched: v.optional(v.boolean()), // false/undefined = placeholder job, true = fully fetched
+
     // Education requirements
     educationLevel: v.optional(createUnionValidator(EDUCATION_LEVELS)),
 
@@ -164,7 +170,10 @@ export default defineSchema({
     // Tracking
     lastScraped: v.optional(v.number()), // Timestamp when this job was last seen during scraping
     deletedAt: v.optional(v.number()), // Timestamp when this job was soft deleted (no longer available on job board)
-  }).index("by_company", ["companyId"]),
+  })
+    .index("by_company", ["companyId"])
+    .index("by_fetched", ["isFetched"])
+    .index("by_first_seen", ["firstSeenAt"]),
 
   applications: defineTable({
     userId: v.id("users"),

@@ -77,7 +77,7 @@ export default function AdminPage() {
               </p>
             </div>
             <Link href="/admin/companies/add">
-              <Button className="cursor-pointer">
+              <Button className="">
                 <PlusIcon className="mr-2 size-4" />
                 Add Company
               </Button>
@@ -298,11 +298,7 @@ function ErrorMonitoringContent() {
                     </p>
                   </div>
                   <Link href={`/admin/companies/${company.id}`}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="cursor-pointer"
-                    >
+                    <Button variant="outline" size="sm" className="">
                       View Details
                     </Button>
                   </Link>

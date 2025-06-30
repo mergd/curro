@@ -14,16 +14,9 @@ export class GenericAdapter extends BaseATSAdapter {
   name = "Generic";
 
   /**
-   * Synchronous extraction not implemented – always returns empty list.
-   */
-  extractJobLinks(_html: string, _baseUrl: string): string[] {
-    return [];
-  }
-
-  /**
    * AI-powered asynchronous extraction of job links.
    */
-  async extractJobLinksAsync(html: string, baseUrl: string): Promise<string[]> {
+  async extractJobLinks(html: string, baseUrl: string): Promise<string[]> {
     try {
       console.log("Using AI for job link extraction");
       const { urls } = await this.parseJobLinks(html);

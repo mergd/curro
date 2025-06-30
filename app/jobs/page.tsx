@@ -22,7 +22,7 @@ export default function JobsPage() {
             Discover and manage job opportunities from top companies
           </p>
         </div>
-        <Button className="cursor-pointer">
+        <Button className="">
           <PlusIcon className="mr-2 size-4" />
           Add Job
         </Button>

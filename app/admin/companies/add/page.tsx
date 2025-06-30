@@ -320,7 +320,7 @@ export default function AddCompanyPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/admin">
-          <Button variant="outline" size="sm" className="cursor-pointer">
+          <Button variant="outline" size="sm" className="">
             <ArrowLeftIcon className="size-4 mr-2" />
             Back to Companies
           </Button>
@@ -360,7 +360,7 @@ export default function AddCompanyPage() {
                     name="website"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Website</FormLabel>
+                        <FormLabel required>Website</FormLabel>
                         <FormControl>
                           <Input placeholder="https://acme.com" {...field} />
                         </FormControl>
@@ -485,7 +485,10 @@ export default function AddCompanyPage() {
                           >
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Auto-detected" />
+                                <SelectValue
+                                  defaultValue={SOURCE_TYPES[0]}
+                                  placeholder="Auto-detected"
+                                />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -854,18 +857,14 @@ export default function AddCompanyPage() {
           {/* Submit Buttons */}
           <div className="flex items-center justify-end gap-4 pt-6 border-t">
             <Link href="/admin">
-              <Button
-                type="button"
-                variant="outline"
-                className="cursor-pointer"
-              >
+              <Button type="button" variant="outline" className="">
                 Cancel
               </Button>
             </Link>
             <Button
               type="submit"
               disabled={form.formState.isSubmitting}
-              className="cursor-pointer"
+              className=""
             >
               {form.formState.isSubmitting ? "Adding..." : "Add Company"}
             </Button>

@@ -25,6 +25,7 @@ import { Card } from "@radix-ui/themes";
 import { useQuery } from "convex/react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Suspense, use, useMemo, useState } from "react";
 
 import { CompanyDetailSkeleton } from "./components/company-detail-skeleton";
@@ -498,6 +499,7 @@ function ErrorStatsCard({ company }: { company: any }) {
 }
 
 function CompanyJobsTable({ companyId }: { companyId: string }) {
+  const router = useRouter();
   const jobs = useQuery(api.jobs.findActiveJobsByCompany, {
     companyId: companyId as any,
   });
@@ -512,12 +514,17 @@ function CompanyJobsTable({ companyId }: { companyId: string }) {
     },
   });
 
+  const handleRowClick = (row: any) => {
+    const job = row.original;
+    router.push(`/jobs/${job._id}`);
+  };
+
   if (!jobs) {
     return <DataTableSkeleton columnCount={6} />;
   }
 
   return (
-    <DataTable table={table}>
+    <DataTable table={table} onRowClick={handleRowClick}>
       <DataTableToolbar table={table} />
     </DataTable>
   );
