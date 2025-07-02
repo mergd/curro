@@ -39,18 +39,6 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
                     {job.company.name}
                   </button>
                 </CompanyPreviewPopover>
-                <div className="flex gap-1 flex-wrap">
-                  {job.company.stage && (
-                    <Badge variant="blue" className="text-xs">
-                      {job.company.stage}
-                    </Badge>
-                  )}
-                  {job.company.category && job.company.category.length > 0 && (
-                    <Badge variant="purple" className="text-xs">
-                      {job.company.category[0]}
-                    </Badge>
-                  )}
-                </div>
               </div>
             ) : (
               "Unknown Company"
@@ -59,46 +47,93 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
         </div>
       );
     },
-    meta: {
-      label: "Job Title",
-      variant: "text",
-      placeholder: "Search jobs...",
-    },
     enableSorting: true,
-    enableColumnFilter: false,
   },
   {
-    accessorKey: "roleType",
+    id: "type",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Role Type" />
+      <DataTableColumnHeader column={column} title="Type" />
     ),
     cell: ({ row }) => {
-      const roleType = row.getValue("roleType") as string;
-      if (!roleType) return null;
+      const job = row.original;
+      const roleType = job.roleType;
+      const employmentType = job.employmentType;
+      const remoteOptions = job.remoteOptions;
+
+      if (!roleType && !employmentType && !remoteOptions) return null;
+
+      // Format role type
+      const formattedRoleType = roleType
+        ? roleType.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())
+        : null;
+
+      // Show employment type only if it's not permanent (since that's the default)
+      const showEmploymentType =
+        employmentType && employmentType !== "Permanent";
+      const formattedEmploymentType = showEmploymentType
+        ? employmentType === "Internship"
+          ? "Internship"
+          : employmentType
+        : null;
+
+      // Format remote options
+      const formattedRemoteOptions =
+        remoteOptions === "On-Site" ? "On-site" : remoteOptions;
+
+      // Combine type information
+      const typeParts = [
+        formattedRoleType,
+        formattedEmploymentType,
+        formattedRemoteOptions,
+      ].filter(Boolean);
+
+      if (typeParts.length === 0) return null;
+
       return (
-        <Badge color="blue" className="text-xs">
-          {roleType.replace("-", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-        </Badge>
+        <div className="flex flex-wrap gap-1">
+          {formattedRoleType && (
+            <Badge color="blue" className="text-xs">
+              {formattedRoleType}
+            </Badge>
+          )}
+          {formattedEmploymentType && (
+            <Badge color="purple" className="text-xs">
+              {formattedEmploymentType}
+            </Badge>
+          )}
+          {formattedRemoteOptions && (
+            <Badge
+              color={
+                remoteOptions === "Remote"
+                  ? "green"
+                  : remoteOptions === "Hybrid"
+                    ? "yellow"
+                    : "blue"
+              }
+              className="text-xs"
+            >
+              {formattedRemoteOptions}
+            </Badge>
+          )}
+        </div>
       );
     },
-    meta: {
-      variant: "select",
-      options: [
-        { label: "Software Engineering", value: "software-engineering" },
-        { label: "Data Science", value: "data-science" },
-        { label: "Product Management", value: "product-management" },
-        { label: "Design", value: "design" },
-        { label: "Marketing", value: "marketing" },
-        { label: "Sales", value: "sales" },
-        { label: "Operations", value: "operations" },
-        { label: "Finance", value: "finance" },
-        { label: "HR", value: "hr" },
-        { label: "Legal", value: "legal" },
-        { label: "Customer Success", value: "customer-success" },
-        { label: "Business Development", value: "business-development" },
-        { label: "General Apply", value: "general-apply" },
-      ],
+  },
+  {
+    accessorKey: "yearsOfExperience",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Experience" />
+    ),
+    cell: ({ row }) => {
+      const experience = row.getValue("yearsOfExperience") as any;
+      if (!experience) return "Not specified";
+
+      if (experience.max) {
+        return `${experience.min}-${experience.max} years`;
+      }
+      return `${experience.min}+ years`;
     },
+    enableSorting: false,
     enableColumnFilter: false,
   },
   {
@@ -109,85 +144,22 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
     cell: ({ row }) => {
       const locations = row.getValue("locations") as string[] | undefined;
       if (!locations || locations.length === 0) return "Not specified";
+      // truncate the location to not include the country code
+      const truncatedLocations = locations.map((location) => {
+        return location.split(",").slice(0, -1).join(", ");
+      });
 
       return (
         <div className="space-y-1">
-          <div>{locations.slice(0, 2).join(", ")}</div>
-          {locations.length > 2 && (
+          <div>{truncatedLocations.slice(0, 2).join(", ")}</div>
+          {truncatedLocations.length > 2 && (
             <div className="text-xs text-muted-foreground">
-              +{locations.length - 2} more
+              +{truncatedLocations.length - 2} more
             </div>
           )}
         </div>
       );
     },
-    meta: {
-      variant: "text",
-      placeholder: "Search locations...",
-    },
-    enableColumnFilter: false,
-  },
-  {
-    accessorKey: "remoteOptions",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Work Type" />
-    ),
-    cell: ({ row }) => {
-      const remoteOptions = row.getValue("remoteOptions") as string;
-      if (!remoteOptions) return null;
-
-      const colorMap = {
-        Remote: "green",
-        Hybrid: "yellow",
-        "On-Site": "blue",
-      } as const;
-
-      return (
-        <Badge
-          color={colorMap[remoteOptions as keyof typeof colorMap] || "default"}
-          className="text-xs"
-        >
-          {remoteOptions === "On-Site" ? "On-site" : remoteOptions}
-        </Badge>
-      );
-    },
-    meta: {
-      variant: "select",
-      options: [
-        { label: "Remote", value: "Remote" },
-        { label: "Hybrid", value: "Hybrid" },
-        { label: "On-site", value: "On-Site" },
-      ],
-    },
-    enableColumnFilter: false,
-  },
-  {
-    accessorKey: "employmentType",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Type" />
-    ),
-    cell: ({ row }) => {
-      const employmentType = row.getValue("employmentType") as string;
-      if (!employmentType || employmentType === "permanent") return null;
-
-      return (
-        <Badge color="purple" className="text-xs">
-          {employmentType === "internship" ? "Internship" : employmentType}
-        </Badge>
-      );
-    },
-    meta: {
-      variant: "select",
-      options: [
-        { label: "Permanent", value: "permanent" },
-        { label: "Contract", value: "contract" },
-        { label: "Part-time", value: "part-time" },
-        { label: "Temporary", value: "temporary" },
-        { label: "Freelance", value: "freelance" },
-        { label: "Internship", value: "internship" },
-      ],
-    },
-    enableColumnFilter: false,
   },
   {
     accessorKey: "compensation",

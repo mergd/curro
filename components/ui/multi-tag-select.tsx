@@ -21,6 +21,8 @@ import { forwardRef, useEffect, useRef, useState } from "react";
 export interface MultiSelectOption {
   label: string;
   value: string;
+  count?: number;
+  starred?: boolean;
 }
 
 interface MultiSelectProps {
@@ -51,6 +53,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
     const [open, setOpen] = useState(false);
     const [showAllTags, setShowAllTags] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLButtonElement>(null);
 
     // Show all tags when focused/open, collapse when closed
     useEffect(() => {
@@ -84,7 +87,14 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            ref={ref}
+            ref={(node) => {
+              if (typeof ref === "function") {
+                ref(node);
+              } else if (ref) {
+                ref.current = node;
+              }
+              triggerRef.current = node;
+            }}
             variant="outline"
             role="combobox"
             aria-expanded={open}
@@ -156,7 +166,11 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
             <CaretDownIcon className="size-4 shrink-0 opacity-50 ml-2" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-full p-0" align="start">
+        <PopoverContent
+          className="p-0"
+          align="start"
+          style={{ width: triggerRef.current?.offsetWidth }}
+        >
           <Command>
             <CommandInput placeholder="Search..." className="h-9" />
             <CommandEmpty>No items found.</CommandEmpty>
@@ -166,16 +180,26 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                   <CommandItem
                     key={option.value}
                     onSelect={() => handleSelect(option.value)}
+                    className="flex items-center justify-between"
                   >
-                    <CheckIcon
-                      className={cn(
-                        "mr-2 size-4",
-                        value.includes(option.value)
-                          ? "opacity-100"
-                          : "opacity-0",
-                      )}
-                    />
-                    {option.label}
+                    <div className="flex items-center">
+                      <CheckIcon
+                        className={cn(
+                          "mr-2 size-4",
+                          value.includes(option.value)
+                            ? "opacity-100"
+                            : "opacity-0",
+                        )}
+                      />
+                      <span className={cn(option.starred && "font-medium")}>
+                        {option.label}
+                      </span>
+                    </div>
+                    {option.count !== undefined && (
+                      <span className="text-muted-foreground text-sm ml-2">
+                        {option.count}
+                      </span>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>

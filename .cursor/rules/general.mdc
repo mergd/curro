@@ -3,6 +3,10 @@ description:
 globs: 
 alwaysApply: true
 ---
+
+
+Make sure that types are standardized since we're dealing with somewhat unstructured data – check @lib/constants.ts for all the types that should be there – as it's shared by the frontend and backend.
+
 This is a repo with convex, Nextjs 15, React 19, and convex auth.
 
 When starting off, run `pnpm run auth:setup` to setup jwt.

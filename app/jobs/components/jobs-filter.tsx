@@ -5,18 +5,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/ui/multi-tag-select";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TimezoneDropdown } from "@/components/ui/timezone-dropdown";
+import {
   ALL_FILTER_VALUE,
   COMPANY_CATEGORIES,
   COMPANY_STAGES,
   EMPLOYMENT_TYPE_OPTIONS,
+  LOCATION_HIERARCHY,
   REMOTE_OPTIONS,
   ROLE_TYPE_OPTIONS,
+  TIMEZONES,
 } from "@/lib/constants";
 
 import {
   CaretDownIcon,
   CaretUpIcon,
   FunnelIcon,
+  SlidersIcon,
   XIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -26,18 +37,51 @@ interface JobFilters {
   company: string;
   companyStage: string[];
   companyCategory: string[];
-  location: string;
+  country: string[];
+  city: string[];
+  timezone: string[];
   remoteOption: string[];
-  country: string;
-  city: string;
   roleType: string[];
   employmentType: string[];
+  // salaryRange: { min?: number; max?: number }; // Removed - need to handle hourly vs annual salaries differently
+  experienceRange: { min?: number; max?: number };
 }
 
 interface JobsFilterProps {
   filters: JobFilters;
-  onFilterChange: (key: keyof JobFilters, value: string | string[]) => void;
+  onFilterChange: (
+    key: keyof JobFilters,
+    value: string | string[] | { min?: number; max?: number },
+  ) => void;
   onClearFilters: () => void;
+}
+
+interface JobsSearchProps {
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+}
+
+// todo: full text search for jobs
+export function JobsSearch({ searchQuery, onSearchChange }: JobsSearchProps) {
+  return (
+    <Card className="p-4 mb-4">
+      <div className="space-y-2">
+        <Label htmlFor="global-search" className="text-sm font-medium">
+          Search Jobs
+        </Label>
+        <Input
+          id="global-search"
+          placeholder="Search by job title, company, or location..."
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="text-base"
+        />
+        <p className="text-xs text-muted-foreground">
+          Search across job titles, company names, locations, and role types
+        </p>
+      </div>
+    </Card>
+  );
 }
 
 export function JobsFilter({
@@ -46,13 +90,30 @@ export function JobsFilter({
   onClearFilters,
 }: JobsFilterProps) {
   const [showActiveFilters, setShowActiveFilters] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showPrimaryFilters, setShowPrimaryFilters] = useState(true);
 
   const activeFiltersList = Object.entries(filters)
-    .filter(([_, value]) => {
+    .filter(([key, value]) => {
+      // Skip searchQuery and company since they're handled separately
+      if (key === "searchQuery" || key === "company") return false;
+
+      if (key === "location") {
+        return (
+          value && typeof value === "object" && value.country && value.city
+        );
+      }
+      if (key === "experienceRange") {
+        return (
+          value &&
+          typeof value === "object" &&
+          (value.min !== undefined || value.max !== undefined)
+        );
+      }
       if (Array.isArray(value)) {
         return value.length > 0;
       }
-      return value !== "" && value !== ALL_FILTER_VALUE;
+      return value !== "" && value !== ALL_FILTER_VALUE && value !== undefined;
     })
     .map(([key, value]) => {
       const label = key
@@ -62,7 +123,18 @@ export function JobsFilter({
 
       // Get display value for select options
       let displayValue: string;
-      if (Array.isArray(value)) {
+      if (key === "experienceRange") {
+        const range = value as { min?: number; max?: number };
+        if (range.min && range.max) {
+          displayValue = `${range.min}-${range.max} years`;
+        } else if (range.min) {
+          displayValue = `${range.min}+ years`;
+        } else if (range.max) {
+          displayValue = `Up to ${range.max} years`;
+        } else {
+          displayValue = "";
+        }
+      } else if (Array.isArray(value)) {
         if (key === "roleType") {
           displayValue = value
             .map(
@@ -82,11 +154,20 @@ export function JobsFilter({
           displayValue = value
             .map((v) => (v === "On-Site" ? "On-site" : v))
             .join(", ");
+        } else if (key === "country") {
+          displayValue = value
+            .map((countryCode) => {
+              const country = Object.entries(LOCATION_HIERARCHY).find(
+                ([code]) => code === countryCode,
+              );
+              return country ? country[1].name : countryCode;
+            })
+            .join(", ");
         } else {
           displayValue = value.join(", ");
         }
       } else {
-        displayValue = value;
+        displayValue = value as string;
       }
 
       return {
@@ -98,6 +179,41 @@ export function JobsFilter({
     });
 
   const hasActiveFilters = activeFiltersList.length > 0;
+
+  // Check if work type is only "Remote"
+  const isRemoteOnly =
+    filters.remoteOption.length === 1 &&
+    filters.remoteOption.includes("Remote");
+
+  // Check if Remote is included (for showing timezone)
+  const includesRemote =
+    filters.remoteOption.includes("Remote") ||
+    filters.remoteOption.length === 0;
+
+  // Generate city options based on country selection
+  const getCityOptions = () => {
+    const countries =
+      filters.country.length === 0
+        ? Object.entries(LOCATION_HIERARCHY)
+        : Object.entries(LOCATION_HIERARCHY).filter(([code]) =>
+            filters.country.includes(code),
+          );
+
+    const allCities = countries.flatMap(([, data]) => [...data.cities]);
+
+    // Sort cities: starred first (with semibold), then alphabetically
+    const sortedCities = allCities.sort((a, b) => {
+      if (a.starred && !b.starred) return -1;
+      if (!a.starred && b.starred) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    return sortedCities.map((city) => ({
+      value: city.name,
+      label: city.name,
+      starred: city.starred,
+    }));
+  };
 
   return (
     <div className="space-y-4">
@@ -125,143 +241,280 @@ export function JobsFilter({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <Label htmlFor="company-filter" className="text-sm font-medium">
-              Company
-            </Label>
-            <Input
-              id="company-filter"
-              placeholder="Search companies..."
-              value={filters.company}
-              onChange={(e) => onFilterChange("company", e.target.value)}
-              className="mt-1"
-            />
-          </div>
+        {/* Primary Filters Toggle */}
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => setShowPrimaryFilters(!showPrimaryFilters)}
+            className="text-sm text-muted-foreground hover:text-foreground px-0 mb-3"
+          >
+            <FunnelIcon className="size-4 mr-2" />
+            Primary Filters
+            {showPrimaryFilters ? (
+              <CaretUpIcon className="size-4 ml-2" />
+            ) : (
+              <CaretDownIcon className="size-4 ml-2" />
+            )}
+          </Button>
 
-          <div>
-            <Label htmlFor="role-type-filter" className="text-sm font-medium">
-              Role Type
-            </Label>
-            <MultiSelect
-              options={ROLE_TYPE_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-              value={filters.roleType}
-              onValueChange={(value) => onFilterChange("roleType", value)}
-              placeholder="Any role type"
-              className="mt-1"
-            />
-          </div>
+          {showPrimaryFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <Label
+                  htmlFor="role-type-filter"
+                  className="text-sm font-medium"
+                >
+                  Role Type
+                </Label>
+                <MultiSelect
+                  options={ROLE_TYPE_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  value={filters.roleType}
+                  onValueChange={(value) => onFilterChange("roleType", value)}
+                  placeholder="Any role type"
+                  className="mt-1"
+                />
+              </div>
 
-          <div>
-            <Label
-              htmlFor="employment-type-filter"
-              className="text-sm font-medium"
-            >
-              Employment Type
-            </Label>
-            <MultiSelect
-              options={EMPLOYMENT_TYPE_OPTIONS.map((option) => ({
-                value: option.value,
-                label: option.label,
-              }))}
-              value={filters.employmentType}
-              onValueChange={(value) => onFilterChange("employmentType", value)}
-              placeholder="Any employment type"
-              className="mt-1"
-            />
-          </div>
+              <div>
+                <Label
+                  htmlFor="employment-type-filter"
+                  className="text-sm font-medium"
+                >
+                  Employment Type
+                </Label>
+                <MultiSelect
+                  options={EMPLOYMENT_TYPE_OPTIONS.map((option) => ({
+                    value: option.value,
+                    label: option.label,
+                  }))}
+                  value={filters.employmentType}
+                  onValueChange={(value) =>
+                    onFilterChange("employmentType", value)
+                  }
+                  placeholder="Any employment type"
+                  className="mt-1"
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="remote-filter" className="text-sm font-medium">
-              Work Type
-            </Label>
-            <MultiSelect
-              options={REMOTE_OPTIONS.map((option) => ({
-                value: option,
-                label: option === "On-Site" ? "On-site" : option,
-              }))}
-              value={filters.remoteOption}
-              onValueChange={(value) => onFilterChange("remoteOption", value)}
-              placeholder="Any work type"
-              className="mt-1"
-            />
-          </div>
+              <div>
+                <Label htmlFor="remote-filter" className="text-sm font-medium">
+                  Work Type
+                </Label>
+                <MultiSelect
+                  options={REMOTE_OPTIONS.map((option) => ({
+                    value: option,
+                    label: option === "On-Site" ? "On-site" : option,
+                  }))}
+                  value={filters.remoteOption}
+                  onValueChange={(value) =>
+                    onFilterChange("remoteOption", value)
+                  }
+                  placeholder="Any work type"
+                  className="mt-1"
+                />
+              </div>
 
-          <div>
-            <Label htmlFor="stage-filter" className="text-sm font-medium">
-              Company Stage
-            </Label>
-            <MultiSelect
-              options={COMPANY_STAGES.map((stage) => ({
-                value: stage,
-                label: stage,
-              }))}
-              value={filters.companyStage}
-              onValueChange={(value) => onFilterChange("companyStage", value)}
-              placeholder="Any stage"
-              className="mt-1"
-            />
-          </div>
+              <div>
+                <Label
+                  htmlFor="experience-filter"
+                  className="text-sm font-medium"
+                >
+                  Years of Experience
+                </Label>
+                <Select
+                  value={(() => {
+                    if (
+                      !filters.experienceRange ||
+                      (filters.experienceRange.min === undefined &&
+                        filters.experienceRange.max === undefined)
+                    ) {
+                      return "all";
+                    }
 
-          <div>
-            <Label htmlFor="category-filter" className="text-sm font-medium">
-              Company Category
-            </Label>
-            <MultiSelect
-              options={COMPANY_CATEGORIES.map((category) => ({
-                value: category,
-                label: category,
-              }))}
-              value={filters.companyCategory}
-              onValueChange={(value) =>
-                onFilterChange("companyCategory", value)
-              }
-              placeholder="Any category"
-              className="mt-1"
-            />
-          </div>
+                    const { min, max } = filters.experienceRange;
 
-          <div>
-            <Label htmlFor="country-filter" className="text-sm font-medium">
-              Country
-            </Label>
-            <Input
-              id="country-filter"
-              placeholder="e.g., USA, GBR, CAN..."
-              value={filters.country}
-              onChange={(e) => onFilterChange("country", e.target.value)}
-              className="mt-1"
-            />
-          </div>
+                    // Map back to dropdown values
+                    if (min === 0 && max === 1) return "0-1";
+                    if (min === 2 && max === 3) return "2-3";
+                    if (min === 4 && max === 6) return "4-6";
+                    if (min === 7 && max === 10) return "7-10";
+                    if (min === 11 && max === 15) return "11-15";
+                    if (min === 15 && max === undefined) return "15+";
 
-          <div>
-            <Label htmlFor="city-filter" className="text-sm font-medium">
-              City
-            </Label>
-            <Input
-              id="city-filter"
-              placeholder="e.g., London, New York..."
-              value={filters.city}
-              onChange={(e) => onFilterChange("city", e.target.value)}
-              className="mt-1"
-            />
-          </div>
+                    return "all";
+                  })()}
+                  onValueChange={(value) => {
+                    if (value === "all") {
+                      onFilterChange("experienceRange", {
+                        min: undefined,
+                        max: undefined,
+                      });
+                    } else if (value === "15+") {
+                      onFilterChange("experienceRange", {
+                        min: 15,
+                        max: undefined,
+                      });
+                    } else {
+                      const [min, max] = value.split("-").map(Number);
+                      onFilterChange("experienceRange", { min, max });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Any experience level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any experience level</SelectItem>
+                    <SelectItem value="0-1">0-1 years (Entry level)</SelectItem>
+                    <SelectItem value="2-3">2-3 years (Junior)</SelectItem>
+                    <SelectItem value="4-6">4-6 years (Mid-level)</SelectItem>
+                    <SelectItem value="7-10">7-10 years (Senior)</SelectItem>
+                    <SelectItem value="11-15">
+                      11-15 years (Staff/Principal)
+                    </SelectItem>
+                    <SelectItem value="15+">15+ years (Executive)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <Label htmlFor="location-filter" className="text-sm font-medium">
-              General Location
-            </Label>
-            <Input
-              id="location-filter"
-              placeholder="Search any location..."
-              value={filters.location}
-              onChange={(e) => onFilterChange("location", e.target.value)}
-              className="mt-1"
-            />
-          </div>
+              {/* Salary Range removed - need to handle hourly vs annual salaries differently */}
+
+              {!isRemoteOnly && (
+                <>
+                  <div>
+                    <Label
+                      htmlFor="country-filter"
+                      className="text-sm font-medium"
+                    >
+                      Country
+                    </Label>
+                    <MultiSelect
+                      options={Object.entries(LOCATION_HIERARCHY).map(
+                        ([code, data]) => ({
+                          value: code,
+                          label: data.name,
+                        }),
+                      )}
+                      value={filters.country}
+                      onValueChange={(value) =>
+                        onFilterChange("country", value)
+                      }
+                      placeholder="Any country"
+                      className="mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <Label
+                      htmlFor="city-filter"
+                      className="text-sm font-medium"
+                    >
+                      City
+                    </Label>
+                    <MultiSelect
+                      options={getCityOptions()}
+                      value={filters.city}
+                      onValueChange={(value) => onFilterChange("city", value)}
+                      placeholder="Any city"
+                      className="mt-1"
+                    />
+                  </div>
+                </>
+              )}
+
+              {includesRemote && (
+                <div>
+                  <Label
+                    htmlFor="timezone-filter"
+                    className="text-sm font-medium"
+                  >
+                    Timezone
+                  </Label>
+                  <MultiSelect
+                    options={TIMEZONES.map((tz) => ({
+                      value: tz.value,
+                      label: tz.label,
+                    }))}
+                    value={filters.timezone}
+                    onValueChange={(value) => onFilterChange("timezone", value)}
+                    placeholder="Any timezone"
+                    className="mt-1"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Advanced Filters Toggle */}
+        <div className="border-t pt-3">
+          <Button
+            variant="ghost"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="text-sm text-muted-foreground hover:text-foreground px-0"
+          >
+            <SlidersIcon className="size-4 mr-2" />
+            Company Filters
+            {showAdvancedFilters ? (
+              <CaretUpIcon className="size-4 ml-2" />
+            ) : (
+              <CaretDownIcon className="size-4 ml-2" />
+            )}
+          </Button>
+
+          {showAdvancedFilters && (
+            <div className="mt-3 pt-3 border-t space-y-3">
+              <h4 className="text-sm font-semibold text-foreground">
+                Company Details
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <Label
+                    htmlFor="stage-filter"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Company Stage
+                  </Label>
+                  <MultiSelect
+                    options={COMPANY_STAGES.map((stage) => ({
+                      value: stage,
+                      label: stage,
+                    }))}
+                    value={filters.companyStage}
+                    onValueChange={(value) =>
+                      onFilterChange("companyStage", value)
+                    }
+                    placeholder="Any stage"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="category-filter"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Company Category
+                  </Label>
+                  <MultiSelect
+                    options={COMPANY_CATEGORIES.map((category) => ({
+                      value: category,
+                      label: category,
+                    }))}
+                    value={filters.companyCategory}
+                    onValueChange={(value) =>
+                      onFilterChange("companyCategory", value)
+                    }
+                    placeholder="Any category"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </Card>
 
@@ -300,25 +553,28 @@ export function JobsFilter({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      const stringFields = [
-                        "searchQuery",
-                        "company",
-                        "location",
-                        "country",
-                        "city",
-                      ];
+                      const stringFields = ["searchQuery", "company"];
                       const arrayFields = [
                         "roleType",
                         "employmentType",
                         "remoteOption",
                         "companyStage",
                         "companyCategory",
+                        "country",
+                        "city",
+                        "timezone",
                       ];
+                      const rangeFields = ["experienceRange"];
 
                       if (stringFields.includes(key)) {
                         onFilterChange(key as keyof JobFilters, "");
                       } else if (arrayFields.includes(key)) {
                         onFilterChange(key as keyof JobFilters, []);
+                      } else if (rangeFields.includes(key)) {
+                        onFilterChange(key as keyof JobFilters, {
+                          min: undefined,
+                          max: undefined,
+                        });
                       }
                     }}
                     className="text-muted-foreground hover:text-foreground transition-colors p-1"

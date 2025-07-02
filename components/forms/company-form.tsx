@@ -90,6 +90,7 @@ export function CompanyForm({
   const jobBoardUrl = form.watch("jobBoardUrl");
   const logoUrl = form.watch("logoUrl");
   const selectedCategories = form.watch("category") || [];
+  const sourceType = form.watch("sourceType");
 
   // Check if prefill should be shown (name and website are filled)
   const canShowPrefill = showAutoFill && companyName.trim() && website?.trim();
@@ -98,8 +99,15 @@ export function CompanyForm({
   useEffect(() => {
     if (jobBoardUrl && jobBoardUrl.trim()) {
       const inferredType = inferSourceType(jobBoardUrl);
-      if (form.getValues("sourceType") !== inferredType) {
-        form.setValue("sourceType", inferredType);
+      const currentSourceType = form.getValues("sourceType");
+      if (currentSourceType !== inferredType) {
+        form.setValue("sourceType", inferredType, { shouldValidate: true });
+      }
+    } else {
+      // Clear sourceType when URL is empty
+      const currentSourceType = form.getValues("sourceType");
+      if (currentSourceType) {
+        form.setValue("sourceType", undefined, { shouldValidate: true });
       }
     }
   }, [jobBoardUrl, form]);
@@ -376,7 +384,8 @@ export function CompanyForm({
                             <FormLabel>ATS Type</FormLabel>
                             <Select
                               onValueChange={field.onChange}
-                              value={field.value}
+                              value={field.value || ""}
+                              key={`sourceType-${field.value}`}
                             >
                               <FormControl>
                                 <SelectTrigger>

@@ -140,7 +140,7 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" asChild>
-                <Link href="/jobs">
+                <Link href="/companies">
                   <ArrowLeftIcon className="size-4" />
                 </Link>
               </Button>
@@ -151,12 +151,7 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
                   size="lg"
                 />
                 <div>
-                  <h1 className="text-3xl font-bold">{company.name}</h1>
-                  {company.description && (
-                    <p className="text-muted-foreground">
-                      {company.description}
-                    </p>
-                  )}
+                  <h1 className="text-xl font-semibold">{company.name}</h1>
                 </div>
               </div>
             </div>
@@ -225,7 +220,7 @@ function CompanyDetailSkeleton() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" asChild>
-                <Link href="/jobs">
+                <Link href="/companies">
                   <ArrowLeftIcon className="size-4" />
                 </Link>
               </Button>

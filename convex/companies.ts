@@ -74,6 +74,85 @@ export const list = query({
   },
 });
 
+export const listWithJobCounts = query({
+  args: {},
+  returns: v.array(
+    v.object({
+      _id: v.id("companies"),
+      _creationTime: v.number(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      foundedYear: v.optional(v.number()),
+      website: v.optional(v.string()),
+      logoUrl: v.optional(v.string()),
+      jobBoardUrl: v.string(),
+      sourceType: createUnionValidator(SOURCE_TYPES),
+      lastScraped: v.optional(v.number()),
+      numberOfEmployees: v.optional(v.string()),
+      stage: v.optional(createUnionValidator(COMPANY_STAGES)),
+      category: v.optional(v.array(createUnionValidator(COMPANY_CATEGORIES))),
+      subcategory: v.optional(v.array(v.string())),
+      tags: v.optional(v.array(v.string())),
+      recentFinancing: v.optional(
+        v.object({
+          amount: v.number(),
+          date: v.string(),
+        }),
+      ),
+      investors: v.optional(v.array(v.string())),
+      recentHires: v.optional(
+        v.array(
+          v.object({
+            name: v.string(),
+            title: v.string(),
+          }),
+        ),
+      ),
+      locations: v.optional(v.array(v.string())),
+      scrapingErrors: v.optional(
+        v.array(
+          v.object({
+            timestamp: v.number(),
+            errorType: v.string(),
+            errorMessage: v.string(),
+            url: v.optional(v.string()),
+          }),
+        ),
+      ),
+      backoffInfo: v.optional(
+        v.object({
+          level: v.number(),
+          nextAllowedScrape: v.number(),
+          consecutiveFailures: v.number(),
+          lastSuccessfulScrape: v.optional(v.number()),
+          totalFailures: v.number(),
+        }),
+      ),
+      jobCount: v.number(),
+    }),
+  ),
+  handler: async (ctx) => {
+    const companies = await ctx.db.query("companies").collect();
+
+    const companiesWithJobCounts = await Promise.all(
+      companies.map(async (company) => {
+        const jobs = await ctx.db
+          .query("jobs")
+          .withIndex("by_company", (q) => q.eq("companyId", company._id))
+          .filter((q) => q.eq(q.field("deletedAt"), undefined))
+          .collect();
+
+        return {
+          ...company,
+          jobCount: jobs.length,
+        };
+      }),
+    );
+
+    return companiesWithJobCounts;
+  },
+});
+
 export const get = query({
   args: { id: v.id("companies") },
   returns: v.union(

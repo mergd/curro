@@ -48,7 +48,7 @@ export function CompanyPreviewPopover({
     e.preventDefault();
     e.stopPropagation();
     setOpen(false);
-    router.push(`/company/${companyId}`);
+    router.push(`/companies/${companyId}`);
   };
 
   return (
@@ -226,7 +226,7 @@ function CompanyPreviewContent({
       {/* Actions */}
       <div className="border-t bg-muted/30 p-3 flex gap-2">
         <Button asChild size="sm" className="flex-1 h-8 text-xs">
-          <Link href={`/company/${company._id}`}>View Company</Link>
+          <Link href={`/companies/${company._id}`}>View Company</Link>
         </Button>
         {company.website && (
           <Button asChild variant="outline" size="sm" className="h-8 px-3">

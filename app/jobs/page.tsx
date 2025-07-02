@@ -7,24 +7,25 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { Header } from "@/components/ui/header";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
-import { ALL_FILTER_VALUE } from "@/lib/constants";
 
 import { useQuery } from "convex/react";
 import { Suspense, useMemo, useState } from "react";
 
-import { jobsColumns, JobsFilter } from "./components";
+import { jobsColumns, JobsFilter, JobsSearch } from "./components";
 
 const initialFilters: JobFilters = {
   searchQuery: "",
   company: "",
   companyStage: [],
   companyCategory: [],
-  location: "",
+  country: [],
+  city: [],
+  timezone: [],
   remoteOption: [],
-  country: "",
-  city: "",
   roleType: [],
   employmentType: [],
+  // salaryRange: { min: undefined, max: undefined }, // Removed - need to handle hourly vs annual salaries differently
+  experienceRange: { min: undefined, max: undefined },
 };
 
 export default function JobsPage() {
@@ -34,8 +35,35 @@ export default function JobsPage() {
     setFilters((prev) => ({ ...prev, searchQuery: query }));
   };
 
-  const updateFilter = (key: keyof JobFilters, value: string | string[]) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+  const updateFilter = (
+    key: keyof JobFilters,
+    value: string | string[] | { min?: number; max?: number },
+  ) => {
+    setFilters((prev) => {
+      const newFilters = { ...prev, [key]: value };
+
+      // Clear location filters when "Remote" is the only selected work type
+      if (
+        key === "remoteOption" &&
+        Array.isArray(value) &&
+        value.length === 1 &&
+        value.includes("Remote")
+      ) {
+        newFilters.country = [];
+        newFilters.city = [];
+      }
+
+      // Clear timezone when no remote work
+      if (
+        key === "remoteOption" &&
+        Array.isArray(value) &&
+        !value.includes("Remote")
+      ) {
+        newFilters.timezone = [];
+      }
+
+      return newFilters;
+    });
   };
 
   const clearFilters = () => {
@@ -44,7 +72,7 @@ export default function JobsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header showSearch onSearch={handleSearch} />
+      <Header />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="flex items-center justify-between">
@@ -59,6 +87,10 @@ export default function JobsPage() {
         <Suspense
           fallback={<DataTableSkeleton columnCount={8} rowCount={15} />}
         >
+          <JobsSearch
+            searchQuery={filters.searchQuery}
+            onSearchChange={(query) => updateFilter("searchQuery", query)}
+          />
           <JobsContent
             filters={filters}
             updateFilter={updateFilter}
@@ -76,7 +108,10 @@ function JobsContent({
   clearFilters,
 }: {
   filters: JobFilters;
-  updateFilter: (key: keyof JobFilters, value: string | string[]) => void;
+  updateFilter: (
+    key: keyof JobFilters,
+    value: string | string[] | { min?: number; max?: number },
+  ) => void;
   clearFilters: () => void;
 }) {
   const jobs = useQuery(api.jobs.listAll, {});
@@ -142,43 +177,80 @@ function JobsContent({
           return false;
       }
 
-      // Country filter (improved - looks for country codes in locations)
-      if (filters.country) {
-        const countryQuery = filters.country.toLowerCase();
+      // Country filter
+      if (filters.country && filters.country.length > 0) {
         const matchesCountry = job.locations?.some((location) => {
           const locationLower = location.toLowerCase();
-          // Check if location ends with country code (e.g., "London, GBR")
-          return (
-            locationLower.endsWith(countryQuery) ||
-            locationLower.includes(`, ${countryQuery}`) ||
-            locationLower.includes(countryQuery)
-          );
+          return filters.country.some((countryCode) => {
+            const countryCodeLower = countryCode.toLowerCase();
+            return (
+              locationLower.endsWith(countryCodeLower) ||
+              locationLower.includes(`, ${countryCodeLower}`) ||
+              locationLower.includes(countryCodeLower)
+            );
+          });
         });
         if (!matchesCountry && job.remoteOptions !== "Remote") return false;
       }
 
-      // City filter (improved - looks specifically for city names)
-      if (filters.city) {
-        const cityQuery = filters.city.toLowerCase();
+      // City filter
+      if (filters.city && filters.city.length > 0) {
         const matchesCity = job.locations?.some((location) => {
           const locationLower = location.toLowerCase();
-          // Check if location starts with city name or contains city name before comma
-          return (
-            locationLower.startsWith(cityQuery) ||
-            locationLower.includes(`${cityQuery},`) ||
-            locationLower === cityQuery
-          );
+          return filters.city.some((city) => {
+            if (city === "all") return true;
+            const cityLower = city.toLowerCase();
+            return (
+              locationLower.startsWith(cityLower) ||
+              locationLower.includes(`${cityLower},`) ||
+              locationLower === cityLower ||
+              locationLower.includes(cityLower)
+            );
+          });
         });
         if (!matchesCity && job.remoteOptions !== "Remote") return false;
       }
 
-      // General location filter (fallback for any location text)
-      if (filters.location) {
-        const locationQuery = filters.location.toLowerCase();
-        const matchesLocation = job.locations?.some((location) =>
-          location.toLowerCase().includes(locationQuery),
-        );
-        if (!matchesLocation && job.remoteOptions !== "Remote") return false;
+      // Timezone filter (for remote jobs)
+      if (
+        filters.timezone &&
+        filters.timezone.length > 0 &&
+        job.remoteOptions === "Remote"
+      ) {
+        // For now, timezone filtering would require additional job data
+        // This is a placeholder for future timezone-based filtering
+        // In practice, you'd need timezone info in job data
+      }
+
+      // Salary range filter removed - need to handle hourly vs annual salaries differently
+
+      // Experience range filter
+      if (
+        filters.experienceRange &&
+        (filters.experienceRange.min !== undefined ||
+          filters.experienceRange.max !== undefined)
+      ) {
+        if (job.yearsOfExperience?.min !== undefined) {
+          const jobExperience = job.yearsOfExperience.min;
+          if (
+            filters.experienceRange.min !== undefined &&
+            jobExperience < filters.experienceRange.min
+          ) {
+            return false;
+          }
+          if (
+            filters.experienceRange.max !== undefined &&
+            jobExperience > filters.experienceRange.max
+          ) {
+            return false;
+          }
+        } else if (
+          filters.experienceRange.min !== undefined &&
+          filters.experienceRange.min > 0
+        ) {
+          // If filter has a minimum but job has no experience info, exclude it
+          return false;
+        }
       }
 
       return true;
