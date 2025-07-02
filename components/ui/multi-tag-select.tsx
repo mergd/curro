@@ -16,7 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 
 import { CaretDownIcon, CheckIcon, XIcon } from "@phosphor-icons/react";
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useRef, useState } from "react";
 
 export interface MultiSelectOption {
   label: string;
@@ -30,6 +30,8 @@ interface MultiSelectProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  enableSelectAll?: boolean;
+  maxVisibleTags?: number;
 }
 
 export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
@@ -41,10 +43,19 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
       placeholder = "Select items...",
       className,
       disabled,
+      enableSelectAll = false,
+      maxVisibleTags = 2,
     },
     ref,
   ) => {
     const [open, setOpen] = useState(false);
+    const [showAllTags, setShowAllTags] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Show all tags when focused/open, collapse when closed
+    useEffect(() => {
+      setShowAllTags(open);
+    }, [open]);
 
     const handleSelect = (selectedValue: string) => {
       const newValue = value.includes(selectedValue)
@@ -66,6 +77,9 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
       onValueChange?.([]);
     };
 
+    const visibleTags = showAllTags ? value : value.slice(0, maxVisibleTags);
+    const hiddenCount = value.length - visibleTags.length;
+
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -74,46 +88,72 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className={cn("w-full justify-between min-h-9 h-auto", className)}
+            className={cn(
+              "w-full justify-between min-h-9 h-auto px-2",
+              className,
+            )}
             disabled={disabled}
           >
-            <div className="flex flex-wrap gap-1 flex-1">
+            <div
+              ref={containerRef}
+              className={cn(
+                "flex gap-1 flex-1 min-w-0",
+                showAllTags ? "flex-wrap py-2" : "flex-nowrap",
+              )}
+            >
               {value.length > 0 ? (
-                value.map((item) => {
-                  const option = options.find((opt) => opt.value === item);
-                  return (
-                    <Badge key={item} variant="default" className="px-2 py-1">
-                      {option?.label ?? item}
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleRemove(item);
-                          }
-                        }}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleRemove(item);
-                        }}
+                <>
+                  {visibleTags.map((item) => {
+                    const option = options.find((opt) => opt.value === item);
+                    return (
+                      <Badge
+                        key={item}
+                        variant="default"
+                        className="inline-flex items-center gap-1 flex-shrink-0"
                       >
-                        <XIcon className="size-3 text-muted-foreground hover:text-foreground" />
-                      </div>
-                    </Badge>
-                  );
-                })
+                        <span>{option?.label ?? item}</span>
+                        {showAllTags && (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            className="ml-0.5 rounded-full hover:bg-secondary-foreground/20 p-0.5 transition-colors"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleRemove(item);
+                              }
+                            }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleRemove(item);
+                            }}
+                          >
+                            <XIcon className="size-3 text-muted-foreground hover:text-foreground" />
+                          </div>
+                        )}
+                      </Badge>
+                    );
+                  })}
+
+                  <div className="flex-grow" />
+                  {hiddenCount > 0 && !showAllTags && (
+                    <span className="text-gray-9 text-sm whitespace-nowrap">
+                      +{hiddenCount} more
+                    </span>
+                  )}
+                </>
               ) : (
-                <span className="text-muted-foreground">{placeholder}</span>
+                <span className="text-muted-foreground text-sm">
+                  {placeholder}
+                </span>
               )}
             </div>
-            <CaretDownIcon className="size-4 shrink-0 opacity-50" />
+            <CaretDownIcon className="size-4 shrink-0 opacity-50 ml-2" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0" align="start">
@@ -140,15 +180,17 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                 ))}
               </CommandGroup>
               <div className="flex gap-1 p-2 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  className="flex-1"
-                  disabled={value.length === options.length}
-                >
-                  Select All
-                </Button>
+                {enableSelectAll && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectAll}
+                    className="flex-1"
+                    disabled={value.length === options.length}
+                  >
+                    Select All
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
