@@ -236,6 +236,32 @@ export const EMPLOYMENT_TYPES = [
   "Internship",
 ] as const;
 
+// Frontend filter options with display labels and values
+export const ROLE_TYPE_OPTIONS = [
+  { label: "Software Engineering", value: "software-engineering" },
+  { label: "Data Science", value: "data-science" },
+  { label: "Product Management", value: "product-management" },
+  { label: "Design", value: "design" },
+  { label: "Marketing", value: "marketing" },
+  { label: "Sales", value: "sales" },
+  { label: "Operations", value: "operations" },
+  { label: "Finance", value: "finance" },
+  { label: "HR", value: "hr" },
+  { label: "Legal", value: "legal" },
+  { label: "Customer Success", value: "customer-success" },
+  { label: "Business Development", value: "business-development" },
+  { label: "General Apply", value: "general-apply" },
+] as const;
+
+export const EMPLOYMENT_TYPE_OPTIONS = [
+  { label: "Permanent", value: "permanent" },
+  { label: "Contract", value: "contract" },
+  { label: "Part-time", value: "part-time" },
+  { label: "Temporary", value: "temporary" },
+  { label: "Freelance", value: "freelance" },
+  { label: "Internship", value: "internship" },
+] as const;
+
 export const COMPENSATION_TYPES = [
   "annual",
   "hourly",
@@ -300,3 +326,6 @@ export type RemoteOption = (typeof REMOTE_OPTIONS)[number];
 export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number];
 export type ApplicationMethod = (typeof APPLICATION_METHODS)[number];
 export type InterviewType = (typeof INTERVIEW_TYPES)[number];
+
+// Filter constants
+export const ALL_FILTER_VALUE = "all" as const;

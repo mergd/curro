@@ -25,7 +25,7 @@ export const setupCronJobs = internalMutation({
       ctx,
       {
         kind: "cron",
-        cronspec: "0 */6 * * *", // Every 6 hours
+        cronspec: "0 */12 * * *", // Every 12 hours
       },
       internal.cronJobs.cleanupOldErrors,
       {},

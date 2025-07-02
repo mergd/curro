@@ -14,12 +14,12 @@ Don't use namespace import usage with React in particular, use the destructured 
 Try not to add Loading... - and use a real skeleton for loading states.
 
 Use cards to keep visual displays consistent - more broadly using a lot of tailwind to style something is an antipattern.
-This is because makes the code less readable – so try to not add too many classes, or add it directly to the component if necessary.
+This is because makes the code less readable - so try to not add too many classes, or add it directly to the component if necessary.
 
 
-Do not use raw fetch – use tanstack query, and if it's commonly used, put it in the use folder
+Do not use raw fetch - use tanstack query, and if it's commonly used, put it in the use folder
 
-Make small/mobile display friendly – and a big tighter on spacing/compactness
+Make small/mobile display friendly - and a big tighter on spacing/compactness
 
 
 Make sure to properly escape punctuation (i.e. ' to &apos; where needed)
@@ -48,9 +48,14 @@ For currencies or countries, I have comboboxes that should be used here.
 If you need to add new components, use `npx shadcn@latest add $component_name`
 
 
-If it's a component that is specific to a page and isn't general, include it in the same folder as opposed to adding it to the components folder and cluttering it up – a good example is a skeleton component
+If it's a component that is specific to a page and isn't general, include it in the same folder as opposed to adding it to the components folder and cluttering it up - a good example is a skeleton component
 
+
+## Select
+
+With the select make sure not to use empty strings for the default value to represent an any/all select option since the empty string is how the select gets cleared - Use "all" as the value instead
 
 ## Icons:
 Prefer Phosphor Icons over lucide, but make sure to add 'Icon' (i.e. GearIcon instead of Gear - as normal imports are deprecated). If the component is server side, import it from 'dist/ssr'
+
 

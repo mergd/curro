@@ -1,5 +1,22 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  FormActions,
+  FormGrid,
+  FormLayout,
+  FormSection,
+} from "@/components/ui/form-layout";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/convex/_generated/api";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,59 +81,141 @@ export function UserProfileForm() {
   }
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label htmlFor="yearsOfExperience">Years of Experience</label>
-        <input
-          {...form.register("yearsOfExperience", { valueAsNumber: true })}
-          id="yearsOfExperience"
-          type="number"
-          className="border p-2 w-full"
-        />
-      </div>
-      <div>
-        <label htmlFor="interests">Interests (comma-separated)</label>
-        <input
-          {...form.register("interests")}
-          id="interests"
-          className="border p-2 w-full"
-        />
-      </div>
-      <div>
-        <label>4 Most Impressive Facts</label>
-        <input
-          {...form.register("fact1")}
-          placeholder="Fact 1"
-          className="border p-2 w-full mt-2"
-        />
-        <input
-          {...form.register("fact2")}
-          placeholder="Fact 2"
-          className="border p-2 w-full mt-2"
-        />
-        <input
-          {...form.register("fact3")}
-          placeholder="Fact 3"
-          className="border p-2 w-full mt-2"
-        />
-        <input
-          {...form.register("fact4")}
-          placeholder="Fact 4"
-          className="border p-2 w-full mt-2"
-        />
-      </div>
-      <div>
-        <label htmlFor="resume">Resume</label>
-        <input
-          type="file"
-          id="resume"
-          onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-          className="border p-2 w-full"
-        />
-      </div>
-      <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-        Save Profile
-      </button>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <FormLayout>
+          <FormSection
+            title="Professional Information"
+            description="Tell us about your experience and interests"
+          >
+            <FormGrid cols={2}>
+              <FormField
+                control={form.control}
+                name="yearsOfExperience"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Years of Experience</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        {...field}
+                        onChange={(e) => field.onChange(Number(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="interests"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Interests (comma-separated)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </FormGrid>
+          </FormSection>
+
+          <FormSection
+            title="4 Most Impressive Facts"
+            description="Share your most compelling achievements"
+          >
+            <FormGrid cols={2}>
+              <FormField
+                control={form.control}
+                name="fact1"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fact 1</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your first impressive fact..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fact2"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fact 2</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your second impressive fact..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fact3"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fact 3</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your third impressive fact..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="fact4"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fact 4</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Your fourth impressive fact..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </FormGrid>
+          </FormSection>
+
+          <FormSection title="Resume Upload">
+            <div>
+              <label
+                htmlFor="resume"
+                className="block text-sm font-medium mb-2"
+              >
+                Resume
+              </label>
+              <input
+                type="file"
+                id="resume"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </div>
+          </FormSection>
+
+          <FormActions>
+            <Button type="submit">Save Profile</Button>
+          </FormActions>
+        </FormLayout>
+      </form>
+    </Form>
   );
 }

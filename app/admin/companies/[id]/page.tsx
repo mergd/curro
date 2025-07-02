@@ -320,7 +320,7 @@ function EnhancedCompanyInfoCard({ company }: { company: any }) {
   const shouldTruncate = description.length > 200;
   const displayDescription =
     shouldTruncate && !showFullDescription
-      ? description.slice(0, 200) + "..."
+      ? description.slice(0, 400) + "..."
       : description;
 
   return (

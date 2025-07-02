@@ -16,7 +16,7 @@ export function LogoCloud() {
     <div className=" py-8">
       <div className="mx-auto max-w-4xl px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-lg font-semibold text-muted-foreground">
+          <h2 className="text-md tracking-tighter font-semibold text-muted-foreground">
             Find your next job at
           </h2>
         </div>
@@ -24,7 +24,7 @@ export function LogoCloud() {
           {logos.map((logo) => (
             <div
               key={logo.name}
-              className="bg-muted/20 p-6 sm:p-8 flex items-center justify-center"
+              className="bg-muted/20 p-4 sm:p-6 flex items-center justify-center"
             >
               <Image
                 alt={logo.name}

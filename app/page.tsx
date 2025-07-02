@@ -1,6 +1,6 @@
 "use client";
 
-import { JobPreviewSkeleton, RecentJobs } from "@/components/jobs";
+import { JobPreviewSkeleton, RecentJobs } from "@/app/jobs/components";
 import { Container, Item } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +18,9 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="py-16 px-4">
         <Container className="max-w-4xl mx-auto text-center space-y-6">
-          <Logo size="lg" className="mx-auto" />
           <Item>
-            <div className="space-y-3">
+            <div className="space-y-3 items-center flex flex-col">
+              <Logo size="lg" className="mb-6" />
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight font-display leading-tight">
                 Find Your Next Dream Job
               </h1>
@@ -42,43 +42,29 @@ export default function HomePage() {
             </div>
           </Item>
 
-          <Item>
-            <Button asChild></Button>
-          </Item>
-
           {/* Stats */}
           <Item>
-            <motion.div
-              className="flex justify-center gap-8 pt-6"
-              variants={{
-                hidden: {},
-                show: {
-                  transition: {
-                    staggerChildren: 0.1,
-                  },
-                },
-              }}
-              initial="hidden"
-              animate="show"
-            >
+            <div className="flex justify-center gap-8">
               <StatsCard number="500+" label="Active Jobs" color="blue" />
               <StatsCard number="100+" label="Companies" color="purple" />
               <StatsCard number="24/7" label="Updates" color="green" />
-            </motion.div>
+            </div>
           </Item>
         </Container>
       </section>
 
       {/* Logo Cloud */}
       <section className="-mt-8">
-        <Item>
-          <LogoCloud />
-        </Item>
+        <Container>
+          <Item>
+            <LogoCloud />
+          </Item>
+        </Container>
       </section>
 
       {/* Recent Jobs Preview */}
       <section className="py-12 px-4 bg-muted/30">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <Container>
             <Item>
               <div className="flex items-center justify-between mb-6">
@@ -148,29 +134,20 @@ function SearchBar() {
   };
 
   return (
-    <motion.form
-      onSubmit={handleSearch}
-      className="relative group"
-      whileHover={{ scale: 1.02, y: -2 }}
-      animate={{ y: [0, -2, 0] }}
-      transition={{
-        y: { duration: 4, repeat: Infinity, ease: "easeInOut" },
-        hover: { type: "spring", stiffness: 300, damping: 20 },
-      }}
-    >
-      <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+    <form onSubmit={handleSearch} className="relative">
+      <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 size-5 text-muted-foreground" />
       <Input
         type="text"
         placeholder="Search for jobs, companies, or roles..."
-        className="pl-12 pr-24 py-5 text-lg rounded-full border-2 transition-all duration-200 hover:border-primary/50 focus:border-primary group-hover:shadow-lg focus:shadow-xl"
+        className="pl-12 pr-24 py-5 text-lg rounded-full border-2 focus:border-primary focus-visible:ring-0"
       />
       <Button
         type="submit"
-        className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full cursor-pointer hover:scale-105 transition-transform duration-200"
+        className="absolute right-1 top-1/2 transform -translate-y-1/2 rounded-full cursor-pointer hover:scale-105 transition-transform duration-200"
       >
         Search
       </Button>
-    </motion.form>
+    </form>
   );
 }
 
@@ -190,22 +167,14 @@ function StatsCard({
   };
 
   return (
-    <motion.div
-      className="text-center"
-      variants={{
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 },
-      }}
-      whileHover={{ scale: 1.05, y: -2 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-    >
+    <div>
       <div
         className={`text-2xl md:text-3xl font-bold ${colorClasses[color]} font-display`}
       >
         {number}
       </div>
       <div className="text-sm text-muted-foreground">{label}</div>
-    </motion.div>
+    </div>
   );
 }
 

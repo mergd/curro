@@ -26,18 +26,32 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
           <div className="font-medium">{job.title}</div>
           <div className="text-sm text-muted-foreground">
             {job.company ? (
-              <CompanyPreviewPopover
-                companyId={job.company._id}
-                side="right"
-                align="start"
-              >
-                <button
-                  className="hover:text-foreground transition-colors text-left"
-                  onClick={(e) => e.preventDefault()}
+              <div className="space-y-1">
+                <CompanyPreviewPopover
+                  companyId={job.company._id}
+                  side="right"
+                  align="start"
                 >
-                  {job.company.name}
-                </button>
-              </CompanyPreviewPopover>
+                  <button
+                    className="hover:text-foreground transition-colors text-left"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    {job.company.name}
+                  </button>
+                </CompanyPreviewPopover>
+                <div className="flex gap-1 flex-wrap">
+                  {job.company.stage && (
+                    <Badge variant="blue" className="text-xs">
+                      {job.company.stage}
+                    </Badge>
+                  )}
+                  {job.company.category && job.company.category.length > 0 && (
+                    <Badge variant="purple" className="text-xs">
+                      {job.company.category[0]}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             ) : (
               "Unknown Company"
             )}
@@ -51,7 +65,7 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
       placeholder: "Search jobs...",
     },
     enableSorting: true,
-    enableColumnFilter: true,
+    enableColumnFilter: false,
   },
   {
     accessorKey: "roleType",
@@ -85,7 +99,7 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
         { label: "General Apply", value: "general-apply" },
       ],
     },
-    enableColumnFilter: true,
+    enableColumnFilter: false,
   },
   {
     accessorKey: "locations",
@@ -111,7 +125,7 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
       variant: "text",
       placeholder: "Search locations...",
     },
-    enableColumnFilter: true,
+    enableColumnFilter: false,
   },
   {
     accessorKey: "remoteOptions",
@@ -123,9 +137,9 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
       if (!remoteOptions) return null;
 
       const colorMap = {
-        remote: "green",
-        hybrid: "yellow",
-        "on-site": "blue",
+        Remote: "green",
+        Hybrid: "yellow",
+        "On-Site": "blue",
       } as const;
 
       return (
@@ -133,23 +147,19 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
           color={colorMap[remoteOptions as keyof typeof colorMap] || "default"}
           className="text-xs"
         >
-          {remoteOptions === "on-site"
-            ? "On-site"
-            : remoteOptions === "remote"
-              ? "Remote"
-              : "Hybrid"}
+          {remoteOptions === "On-Site" ? "On-site" : remoteOptions}
         </Badge>
       );
     },
     meta: {
       variant: "select",
       options: [
-        { label: "Remote", value: "remote" },
-        { label: "Hybrid", value: "hybrid" },
-        { label: "On-site", value: "on-site" },
+        { label: "Remote", value: "Remote" },
+        { label: "Hybrid", value: "Hybrid" },
+        { label: "On-site", value: "On-Site" },
       ],
     },
-    enableColumnFilter: true,
+    enableColumnFilter: false,
   },
   {
     accessorKey: "employmentType",
@@ -177,7 +187,7 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
         { label: "Internship", value: "internship" },
       ],
     },
-    enableColumnFilter: true,
+    enableColumnFilter: false,
   },
   {
     accessorKey: "compensation",
@@ -226,7 +236,7 @@ export const jobsColumns: ColumnDef<JobWithCompany>[] = [
       label: "Posted Date",
     },
     enableSorting: true,
-    enableColumnFilter: true,
+    enableColumnFilter: false,
   },
   {
     id: "actions",

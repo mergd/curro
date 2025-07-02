@@ -27,7 +27,6 @@ import { Suspense, useEffect, useMemo } from "react";
 
 export default function AdminPage() {
   const errorStats = useQuery(api.companies.getErrorStats);
-  const bookmarkStats = useQuery(api.bookmarks.getStats);
 
   const tabItems: TabItem[] = useMemo(
     () => [
@@ -47,19 +46,7 @@ export default function AdminPage() {
             }
           : undefined,
       },
-      {
-        value: "bookmarks",
-        label: "Job Bookmarks",
-        icon: <BookmarkIcon className="size-4" />,
-        badge: bookmarkStats
-          ? {
-              count: bookmarkStats.total,
-              variant: "default",
-            }
-          : {
-              loading: true,
-            },
-      },
+
       {
         value: "errors",
         label: "Error Monitor",
@@ -77,7 +64,7 @@ export default function AdminPage() {
             },
       },
     ],
-    [errorStats, bookmarkStats],
+    [errorStats],
   );
 
   return (
@@ -132,19 +119,6 @@ export default function AdminPage() {
 
             <Suspense fallback={<DataTableSkeleton columnCount={7} />}>
               <CompaniesTable />
-            </Suspense>
-          </TabsContent>
-
-          <TabsContent value="bookmarks" className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold mb-2">Job Bookmarks</h2>
-              <p className="text-muted-foreground">
-                Track and manage your bookmarked job opportunities
-              </p>
-            </div>
-
-            <Suspense fallback={<DataTableSkeleton columnCount={6} />}>
-              <BookmarksTable />
             </Suspense>
           </TabsContent>
 

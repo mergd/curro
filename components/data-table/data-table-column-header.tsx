@@ -84,7 +84,9 @@ export function DataTableColumnHeader<TData, TValue>({
             )}
           </>
         )}
-        {column.getCanHide() && (
+
+        {/* Pretty useless */}
+        {/* {column.getCanHide() && (
           <DropdownMenuCheckboxItem
             className="relative pr-8 pl-2 [&>span:first-child]:right-2 [&>span:first-child]:left-auto [&_svg]:text-muted-foreground"
             checked={!column.getIsVisible()}
@@ -93,7 +95,7 @@ export function DataTableColumnHeader<TData, TValue>({
             <EyeSlashIcon size={12} />
             Hide
           </DropdownMenuCheckboxItem>
-        )}
+        )} */}
       </DropdownMenuContent>
     </DropdownMenu>
   );

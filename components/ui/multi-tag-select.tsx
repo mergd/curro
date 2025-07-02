@@ -58,6 +58,14 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
       onValueChange?.(newValue);
     };
 
+    const handleSelectAll = () => {
+      onValueChange?.(options.map((option) => option.value));
+    };
+
+    const handleClear = () => {
+      onValueChange?.([]);
+    };
+
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
@@ -74,7 +82,7 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                 value.map((item) => {
                   const option = options.find((opt) => opt.value === item);
                   return (
-                    <Badge key={item} variant="default" className="mr-1 mb-1">
+                    <Badge key={item} variant="default" className="px-2 py-1">
                       {option?.label ?? item}
                       <div
                         role="button"
@@ -131,6 +139,26 @@ export const MultiSelect = forwardRef<HTMLButtonElement, MultiSelectProps>(
                   </CommandItem>
                 ))}
               </CommandGroup>
+              <div className="flex gap-1 p-2 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  className="flex-1"
+                  disabled={value.length === options.length}
+                >
+                  Select All
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClear}
+                  className="flex-1"
+                  disabled={value.length === 0}
+                >
+                  Clear
+                </Button>
+              </div>
             </CommandList>
           </Command>
         </PopoverContent>
