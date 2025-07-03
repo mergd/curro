@@ -22,6 +22,48 @@ const JOB_DETAILS_DELAY_MS = 1000; // 1 second between job detail requests
 const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 const MAX_ERRORS_PER_24H = 10; // Maximum errors before marking company as problematic
 
+// Helper function to record scraping metrics
+async function recordScrapingMetrics(
+  ctx: any,
+  companyId: string,
+  metrics: {
+    success: boolean;
+    totalJobsFound?: number;
+    newJobsCreated?: number;
+    existingJobsSkipped?: number;
+    jobsSoftDeleted?: number;
+    scrapeDurationMs?: number;
+    atsType?: string;
+    errorType?: string;
+    errorMessage?: string;
+  },
+) {
+  const now = Date.now();
+  const netJobChange =
+    (metrics.newJobsCreated || 0) - (metrics.jobsSoftDeleted || 0);
+
+  await ctx.runMutation(api.scrapingMetrics.create, {
+    companyId,
+    scrapedAt: now,
+    success: metrics.success,
+    totalJobsFound: metrics.totalJobsFound,
+    newJobsCreated: metrics.newJobsCreated,
+    existingJobsSkipped: metrics.existingJobsSkipped,
+    jobsSoftDeleted: metrics.jobsSoftDeleted,
+    scrapeDurationMs: metrics.scrapeDurationMs,
+    atsType: metrics.atsType,
+    errorType: metrics.errorType,
+    errorMessage: metrics.errorMessage,
+    netJobChange,
+  });
+
+  console.log(
+    `Recorded scraping metrics for company ${companyId}: ` +
+      `${metrics.newJobsCreated || 0} new, ${metrics.existingJobsSkipped || 0} skipped, ` +
+      `${metrics.jobsSoftDeleted || 0} deleted, net change: ${netJobChange}`,
+  );
+}
+
 // Helper function to add an error to the company's error log and update backoff
 async function addCompanyError(
   ctx: any,
@@ -142,6 +184,7 @@ export const scrape = action({
     }
 
     // Schedule the actual scraping work as an internal action
+    const startTime = Date.now();
     const result: {
       success: boolean;
       error?: string;
@@ -160,6 +203,20 @@ export const scrape = action({
     if (result.success) {
       await markSuccessfulScrape(ctx, companyId);
     }
+
+    // Record scraping metrics regardless of success
+    const scrapeEnd = Date.now();
+    await recordScrapingMetrics(ctx, companyId, {
+      success: result.success,
+      totalJobsFound: result.totalFound,
+      newJobsCreated: result.newJobsCount,
+      existingJobsSkipped: result.skippedJobsCount,
+      jobsSoftDeleted: result.softDeletedCount,
+      atsType: result.atsType,
+      scrapeDurationMs: scrapeEnd - startTime,
+      errorType: result.success ? undefined : "scraping_failed",
+      errorMessage: result.error,
+    });
 
     return result;
   },

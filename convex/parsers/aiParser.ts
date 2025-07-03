@@ -271,6 +271,8 @@ Be conservative - only extract information that is clearly stated. If unsure abo
 Resume text to parse:
 ${resumeText}`;
 
+    console.log(prompt);
+
     return await generateStructuredOnly(ParsedResumeSchema, prompt);
   } catch (error) {
     console.error("Resume parsing error:", error);

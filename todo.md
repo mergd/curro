@@ -3,7 +3,7 @@ p0: for launch
 [ ] refetch when queries are updated
 [ ] Fix onboarding flow - wip
 [ ] Full text search for jobs
-
+[ ] Scraping not working?
 p1
 
 

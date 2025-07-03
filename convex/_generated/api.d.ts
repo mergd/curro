@@ -26,6 +26,7 @@ import type * as jobs from "../jobs.js";
 import type * as parsers_aiParser from "../parsers/aiParser.js";
 import type * as resumes from "../resumes.js";
 import type * as scraper from "../scraper.js";
+import type * as scrapingMetrics from "../scrapingMetrics.js";
 import type * as userProfiles from "../userProfiles.js";
 import type * as utils_backoff from "../utils/backoff.js";
 import type * as utils from "../utils.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "parsers/aiParser": typeof parsers_aiParser;
   resumes: typeof resumes;
   scraper: typeof scraper;
+  scrapingMetrics: typeof scrapingMetrics;
   userProfiles: typeof userProfiles;
   "utils/backoff": typeof utils_backoff;
   utils: typeof utils;

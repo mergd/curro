@@ -45,15 +45,13 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
-                    ? "bg-gray-900 text-white shadow-sm"
+                    ? "bg-gray-3 ring-1 ring-gray-4  font-semibold text-white shadow-sm"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 }`}
               >
-                <item.icon
-                  className={`size-4 ${isActive ? "text-white" : ""}`}
-                />
+                <item.icon className={`size-4 ${isActive ? "t" : ""}`} />
                 {item.label}
               </Link>
             );
@@ -94,7 +92,7 @@ export function Header() {
               className="rounded-md p-2.5 text-gray-700"
             >
               <span className="sr-only">Close menu</span>
-              <XIcon className="size-6" />
+              <XIcon className="size-6" fontVariant={"semitone"} />
             </Button>
           </DialogHeader>
 
@@ -110,11 +108,12 @@ export function Header() {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`group flex items-center gap-3 rounded-lg px-3 py-3 text-base font-semibold transition-all duration-200 ${
                         isActive
-                          ? "bg-gray-900 text-white shadow-sm"
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          ? "bg-gray-3 ring-1 ring-gray-4  font-semibold text-gray-12 shadow-sm"
+                          : "text-gray-11 hover:bg-gray-3 hover:text-gray-12"
                       }`}
                     >
                       <item.icon
+                        weight={isActive ? "duotone" : "light"}
                         className={`size-5 ${isActive ? "text-white" : ""}`}
                       />
                       {item.label}

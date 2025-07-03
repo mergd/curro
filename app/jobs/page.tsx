@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
 
 import { useQuery } from "convex/react";
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { jobsColumns, JobsFilter, JobsSearch } from "./components";
 
@@ -24,7 +24,6 @@ const initialFilters: JobFilters = {
   remoteOption: [],
   roleType: [],
   employmentType: [],
-  // salaryRange: { min: undefined, max: undefined }, // Removed - need to handle hourly vs annual salaries differently
   experienceRange: { min: undefined, max: undefined },
 };
 
@@ -114,158 +113,97 @@ function JobsContent({
   ) => void;
   clearFilters: () => void;
 }) {
-  const jobs = useQuery(api.jobs.listAll, {});
+  // Track pagination state manually since we need to sync with server
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(15);
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean }[]>([
+    { id: "_creationTime", desc: true },
+  ]);
 
-  // Enhanced filtering logic
-  const filteredJobs = useMemo(() => {
-    if (!jobs) return [];
+  // Reset page when filters change
+  const resetPage = useCallback(() => {
+    setCurrentPage(0);
+  }, []);
 
-    return jobs.filter((job) => {
-      // Search query filter
-      if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
-        const matchesSearch =
-          job.title.toLowerCase().includes(query) ||
-          job.company?.name?.toLowerCase().includes(query) ||
-          job.locations?.some((location) =>
-            location.toLowerCase().includes(query),
-          ) ||
-          job.roleType?.toLowerCase().includes(query);
+  useEffect(() => {
+    resetPage();
+  }, [filters, resetPage]);
 
-        if (!matchesSearch) return false;
-      }
+  const offset = currentPage * pageSize;
+  const sortBy = sorting.length > 0 ? sorting[0].id : "_creationTime";
+  const sortOrder = sorting.length > 0 && sorting[0].desc ? "desc" : "asc";
 
-      // Company filter
-      if (filters.company) {
-        const companyQuery = filters.company.toLowerCase();
-        const matchesCompany = job.company?.name
-          ?.toLowerCase()
-          .includes(companyQuery);
-        if (!matchesCompany) return false;
-      }
+  // Prepare query arguments
+  const queryArgs = useMemo(
+    () => ({
+      offset,
+      limit: pageSize,
+      searchQuery: filters.searchQuery || undefined,
+      roleType: filters.roleType.length > 0 ? filters.roleType : undefined,
+      employmentType:
+        filters.employmentType.length > 0 ? filters.employmentType : undefined,
+      remoteOption:
+        filters.remoteOption.length > 0 ? filters.remoteOption : undefined,
+      country: filters.country.length > 0 ? filters.country : undefined,
+      city: filters.city.length > 0 ? filters.city : undefined,
+      timezone: filters.timezone.length > 0 ? filters.timezone : undefined,
+      companyStage:
+        filters.companyStage.length > 0 ? filters.companyStage : undefined,
+      companyCategory:
+        filters.companyCategory.length > 0
+          ? filters.companyCategory
+          : undefined,
+      experienceMin: filters.experienceRange?.min,
+      experienceMax: filters.experienceRange?.max,
+      sortBy,
+      sortOrder: sortOrder as "asc" | "desc",
+    }),
+    [offset, pageSize, filters, sortBy, sortOrder],
+  );
 
-      // Role type filter
-      if (filters.roleType && filters.roleType.length > 0) {
-        if (!filters.roleType.includes(job.roleType || "")) return false;
-      }
+  const jobsResult = useQuery(api.jobs.listPaginated, queryArgs);
 
-      // Employment type filter
-      if (filters.employmentType && filters.employmentType.length > 0) {
-        if (!filters.employmentType.includes(job.employmentType || ""))
-          return false;
-      }
-
-      // Company stage filter
-      if (filters.companyStage && filters.companyStage.length > 0) {
-        if (!filters.companyStage.includes(job.company?.stage || ""))
-          return false;
-      }
-
-      // Company category filter
-      if (filters.companyCategory && filters.companyCategory.length > 0) {
-        if (
-          !job.company?.category?.some((category) =>
-            filters.companyCategory.includes(category),
-          )
-        )
-          return false;
-      }
-
-      // Remote option filter
-      if (filters.remoteOption && filters.remoteOption.length > 0) {
-        if (!filters.remoteOption.includes(job.remoteOptions || ""))
-          return false;
-      }
-
-      // Country filter
-      if (filters.country && filters.country.length > 0) {
-        const matchesCountry = job.locations?.some((location) => {
-          const locationLower = location.toLowerCase();
-          return filters.country.some((countryCode) => {
-            const countryCodeLower = countryCode.toLowerCase();
-            return (
-              locationLower.endsWith(countryCodeLower) ||
-              locationLower.includes(`, ${countryCodeLower}`) ||
-              locationLower.includes(countryCodeLower)
-            );
-          });
-        });
-        if (!matchesCountry && job.remoteOptions !== "Remote") return false;
-      }
-
-      // City filter
-      if (filters.city && filters.city.length > 0) {
-        const matchesCity = job.locations?.some((location) => {
-          const locationLower = location.toLowerCase();
-          return filters.city.some((city) => {
-            if (city === "all") return true;
-            const cityLower = city.toLowerCase();
-            return (
-              locationLower.startsWith(cityLower) ||
-              locationLower.includes(`${cityLower},`) ||
-              locationLower === cityLower ||
-              locationLower.includes(cityLower)
-            );
-          });
-        });
-        if (!matchesCity && job.remoteOptions !== "Remote") return false;
-      }
-
-      // Timezone filter (for remote jobs)
-      if (
-        filters.timezone &&
-        filters.timezone.length > 0 &&
-        job.remoteOptions === "Remote"
-      ) {
-        // For now, timezone filtering would require additional job data
-        // This is a placeholder for future timezone-based filtering
-        // In practice, you'd need timezone info in job data
-      }
-
-      // Salary range filter removed - need to handle hourly vs annual salaries differently
-
-      // Experience range filter
-      if (
-        filters.experienceRange &&
-        (filters.experienceRange.min !== undefined ||
-          filters.experienceRange.max !== undefined)
-      ) {
-        if (job.yearsOfExperience?.min !== undefined) {
-          const jobExperience = job.yearsOfExperience.min;
-          if (
-            filters.experienceRange.min !== undefined &&
-            jobExperience < filters.experienceRange.min
-          ) {
-            return false;
-          }
-          if (
-            filters.experienceRange.max !== undefined &&
-            jobExperience > filters.experienceRange.max
-          ) {
-            return false;
-          }
-        } else if (
-          filters.experienceRange.min !== undefined &&
-          filters.experienceRange.min > 0
-        ) {
-          // If filter has a minimum but job has no experience info, exclude it
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [jobs, filters]);
+  const tableData = jobsResult?.jobs || [];
+  const totalCount = jobsResult?.total || 0;
+  const pageCount = Math.ceil(totalCount / pageSize);
 
   const { table } = useDataTable({
-    data: filteredJobs || [],
+    data: tableData,
     columns: jobsColumns,
-    pageCount: Math.ceil((filteredJobs?.length || 0) / 15),
+    pageCount: pageCount,
     initialState: {
       sorting: [{ id: "_creationTime", desc: true }],
-      pagination: { pageIndex: 0, pageSize: 15 },
+      pagination: { pageIndex: currentPage, pageSize: pageSize },
     },
   });
+
+  // Sync table state with our local state
+  useEffect(() => {
+    const tablePagination = table.getState().pagination;
+    const tableSorting = table.getState().sorting;
+
+    // Update page if table pagination changed
+    if (tablePagination.pageIndex !== currentPage) {
+      setCurrentPage(tablePagination.pageIndex);
+    }
+
+    // Update page size if changed
+    if (tablePagination.pageSize !== pageSize) {
+      setPageSize(tablePagination.pageSize);
+    }
+
+    // Update sorting if changed
+    if (JSON.stringify(tableSorting) !== JSON.stringify(sorting)) {
+      setSorting(tableSorting);
+    }
+  }, [
+    table.getState().pagination.pageIndex,
+    table.getState().pagination.pageSize,
+    table.getState().sorting,
+    currentPage,
+    pageSize,
+    sorting,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -277,10 +215,10 @@ function JobsContent({
 
       <DataTable
         table={table}
-        loading={!jobs}
+        loading={!jobsResult}
         emptyTitle="No jobs found"
         emptyDescription="Try adjusting your filters to see more results"
-      ></DataTable>
+      />
     </div>
   );
 }

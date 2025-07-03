@@ -259,4 +259,23 @@ export default defineSchema({
     .index("by_job", ["jobId"])
     .index("by_company", ["companyId"])
     .index("by_user_status", ["userId", "status"]),
+
+  // Track scraping metrics for analytics and monitoring
+  scrapingMetrics: defineTable({
+    companyId: v.id("companies"),
+    scrapedAt: v.number(),
+    success: v.boolean(),
+    totalJobsFound: v.optional(v.number()),
+    newJobsCreated: v.optional(v.number()),
+    existingJobsSkipped: v.optional(v.number()),
+    jobsSoftDeleted: v.optional(v.number()),
+    scrapeDurationMs: v.optional(v.number()),
+    atsType: v.optional(v.string()),
+    errorType: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+    netJobChange: v.optional(v.number()),
+  })
+    .index("by_company", ["companyId"])
+    .index("by_company_and_date", ["companyId", "scrapedAt"])
+    .index("by_date", ["scrapedAt"]),
 });

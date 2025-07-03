@@ -39,7 +39,7 @@
 
     /* Selection */
     --selection-background: var(--blue-3);
-    --selection-foreground: var(--blue-11);
+    /* --selection-foreground: var(--blue-11); */
 
     /* Keyboard shortcuts */
     --kbd-background: var(--gray-3);
@@ -47,8 +47,8 @@
     --kbd-border: var(--gray-4);
 
     /* Highlight */
-    --highlight-background: var(--blue-3);
-    --highlight-foreground: var(--blue-11);
+    /* --highlight-background: var(--blue-3); */
+    /* --highlight-foreground: var(--blue-11); */
 
     /* Radius */
     --radius-small: 4px;

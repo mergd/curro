@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { JSDOM } from "jsdom";
+import { JSDOM, VirtualConsole } from "jsdom";
 
 import { internalAction } from "../_generated/server";
 
@@ -42,7 +42,23 @@ export const scrapeWithJSDOM = internalAction({
       const html = await response.text();
       console.log(`Fetched HTML, length: ${html.length}`);
 
-      // Create JSDOM instance with script execution enabled
+      // Create a virtual console that suppresses JS errors but allows other logs
+      const virtualConsole = new VirtualConsole();
+
+      // Only log warnings and errors that aren't JS execution errors
+      virtualConsole.on("warn", (message) => {
+        if (!message.includes("Error") && !message.includes("TypeError")) {
+          console.warn("JSDOM warn:", message);
+        }
+      });
+
+      virtualConsole.on("error", (message) => {
+        if (!message.includes("Error") && !message.includes("TypeError")) {
+          console.error("JSDOM error:", message);
+        }
+      });
+
+      // Create JSDOM instance with script execution enabled but errors suppressed
       const dom = new JSDOM(html, {
         url,
         referrer: url,
@@ -52,6 +68,7 @@ export const scrapeWithJSDOM = internalAction({
         runScripts: "dangerously", // Enable JavaScript execution
         resources: "usable", // Allow loading external resources
         pretendToBeVisual: true, // Pretend to be a visual browser
+        virtualConsole,
       });
 
       // Wait for any async scripts to run
