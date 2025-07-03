@@ -81,9 +81,36 @@ const JobListingParseResultSchema = z.object({
 
 const JobDetailParseResultSchema = ParsedJobSchema.partial();
 
+// Resume parsing schema
+const ParsedResumeSchema = z.object({
+  // Personal info
+  fullName: z.string().optional(),
+  currentLocation: z.string().optional(), // Format: "City, XXX" (3-char country code)
+
+  // Education
+  educationLevel: z.enum(EDUCATION_LEVELS).optional(),
+
+  // Experience and skills
+  yearsOfExperience: z.number().optional(),
+  currentCompany: z.string().optional(),
+  currentRole: z.string().optional(),
+  isCurrentlyEmployed: z.boolean().optional(),
+
+  // Role preferences (inferred from experience)
+  interestedRoleTypes: z.array(z.enum(ROLE_TYPES)).optional(),
+
+  // Skills and interests
+  technicalSkills: z.array(z.string()).optional(),
+  interests: z.array(z.string()).optional(),
+
+  // Notable achievements or facts
+  keyAchievements: z.array(z.string()).optional(),
+});
+
 export type ParsedJob = z.infer<typeof ParsedJobSchema>;
 export type JobListingParseResult = z.infer<typeof JobListingParseResultSchema>;
 export type JobDetailParseResult = z.infer<typeof JobDetailParseResultSchema>;
+export type ParsedResume = z.infer<typeof ParsedResumeSchema>;
 
 export async function parseJobListings(
   html: string,
@@ -199,4 +226,54 @@ function fallbackParseJobListings(html: string): JobListingParseResult {
   }
 
   return { jobs };
+}
+
+export async function parseResume(resumeText: string): Promise<ParsedResume> {
+  try {
+    const educationLevelsList = EDUCATION_LEVELS.map(
+      (level) => `"${level}"`,
+    ).join(", ");
+    const roleTypesList = ROLE_TYPES.map((type) => `"${type}"`).join(", ");
+
+    const prompt = `Extract structured information from this resume text. Look for:
+
+1. **Personal Information**:
+   - Full name
+   - Current location in format "City, XXX" where XXX is 3-character country code (e.g., "San Francisco, USA", "London, GBR")
+
+2. **Education Level**: Determine the highest education level using: ${educationLevelsList}
+
+3. **Experience**:
+   - Total years of professional experience (approximate)
+   - Current company name (if employed)
+   - Current role/title (if employed)
+   - Whether currently employed (true/false)
+
+4. **Role Types**: Based on experience and skills, determine what role types this person would be interested in: ${roleTypesList}
+   - Look at their job titles, responsibilities, and skills to infer this
+   - Can include multiple role types
+
+5. **Skills and Interests**:
+   - Technical skills (programming languages, tools, technologies)
+   - Professional interests or areas of expertise
+   - Limit to 5-8 most relevant items each
+
+6. **Key Achievements**: Extract 3-4 most impressive accomplishments, projects, or notable facts about their career
+
+**Location Normalization Examples:**
+- SF, San Francisco, Bay Area → "San Francisco, USA"
+- NYC, New York → "New York City, USA"
+- London, UK → "London, GBR"
+- Berlin, Germany → "Berlin, DEU"
+
+Be conservative - only extract information that is clearly stated. If unsure about something, omit that field.
+
+Resume text to parse:
+${resumeText}`;
+
+    return await generateStructuredOnly(ParsedResumeSchema, prompt);
+  } catch (error) {
+    console.error("Resume parsing error:", error);
+    return {}; // Return empty object on error
+  }
 }

@@ -27,6 +27,34 @@ export default defineSchema({
     fourFacts: v.optional(v.array(v.string())),
     resumeId: v.optional(v.id("resumes")),
     bookmarkedJobIds: v.optional(v.array(v.id("jobs"))), // Simple array of bookmarked job IDs
+
+    // Job preferences and background
+    educationLevel: v.optional(createUnionValidator(EDUCATION_LEVELS)),
+    interestedRoleTypes: v.optional(v.array(createUnionValidator(ROLE_TYPES))),
+    preferredEmploymentTypes: v.optional(
+      v.array(createUnionValidator(EMPLOYMENT_TYPES)),
+    ),
+    preferredRemoteOptions: v.optional(
+      v.array(createUnionValidator(REMOTE_OPTIONS)),
+    ),
+
+    // Current situation
+    currentCompany: v.optional(v.string()),
+    currentRole: v.optional(v.string()),
+    isCurrentlyEmployed: v.optional(v.boolean()),
+
+    // Location and preferences
+    currentLocation: v.optional(v.string()), // Format: "City, XXX" (3-char country code)
+    openToRelocation: v.optional(v.boolean()),
+    needsSponsorship: v.optional(v.boolean()),
+    preferredTimezones: v.optional(v.array(v.string())), // For remote work
+
+    // What they're looking for
+    lookingForInNextCompany: v.optional(v.string()), // Free text field
+    desiredStartMonth: v.optional(v.string()), // Format: "YYYY-MM" or "Immediately" or "3-6 months"
+
+    // Onboarding completion
+    hasCompletedOnboarding: v.optional(v.boolean()),
   }).index("by_user", ["userId"]),
 
   resumes: defineTable({

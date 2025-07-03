@@ -237,30 +237,15 @@ export const EMPLOYMENT_TYPES = [
 ] as const;
 
 // Frontend filter options with display labels and values
-export const ROLE_TYPE_OPTIONS = [
-  { label: "Software Engineering", value: "Software Engineering" },
-  { label: "Data Science", value: "Data Science" },
-  { label: "Product Management", value: "Product Management" },
-  { label: "Design", value: "Design" },
-  { label: "Marketing", value: "Marketing" },
-  { label: "Sales", value: "Sales" },
-  { label: "Operations", value: "Operations" },
-  { label: "Finance", value: "Finance" },
-  { label: "HR", value: "HR" },
-  { label: "Legal", value: "Legal" },
-  { label: "Customer Success", value: "Customer Success" },
-  { label: "Business Development", value: "Business Development" },
-  { label: "General Apply", value: "General Apply" },
-] as const;
+export const ROLE_TYPE_OPTIONS = ROLE_TYPES.map((type) => ({
+  label: type,
+  value: type,
+}));
 
-export const EMPLOYMENT_TYPE_OPTIONS = [
-  { label: "Permanent", value: "Permanent" },
-  { label: "Contract", value: "Contract" },
-  { label: "Part-Time", value: "Part-Time" },
-  { label: "Temporary", value: "Temporary" },
-  { label: "Freelance", value: "Freelance" },
-  { label: "Internship", value: "Internship" },
-] as const;
+export const EMPLOYMENT_TYPE_OPTIONS = EMPLOYMENT_TYPES.map((type) => ({
+  label: type,
+  value: type,
+}));
 
 export const COMPENSATION_TYPES = [
   "annual",
