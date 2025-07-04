@@ -49,6 +49,7 @@ import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 
 import { OnboardingFormData } from "./onboarding-schema";
+import { ResumePreview } from "./resume-preview";
 
 interface OnboardingFormProps {
   form: UseFormReturn<any>;
@@ -96,27 +97,26 @@ export function OnboardingForm({
 
       {/* Resume Upload Section */}
       <FormSection
-        title="Upload Your Resume (Optional)"
-        description="We'll use AI to extract your information and pre-fill the form for you."
+        title="Upload Your Resume"
+        description="We'll prefill your information from your resume, and it will be saved to your profile."
       >
         <Dropzone
-          accept={{ "application/pdf": [".pdf"], "text/plain": [".txt"] }}
+          accept={{ "application/pdf": [".pdf"] }}
           maxFiles={1}
           maxSize={10 * 1024 * 1024} // 10MB
           onDrop={handleFileUpload}
           disabled={isParsing}
-          src={selectedFile ? [selectedFile] : undefined}
         >
           <DropzoneEmptyState>
             <div className="flex flex-col items-center justify-center py-8">
-              <div className="flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground mb-4">
+              <div className="mb-4 flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground">
                 <UploadIcon size={24} />
               </div>
-              <p className="text-lg font-medium mb-2">Upload your resume</p>
-              <p className="text-sm text-muted-foreground text-center">
+              <p className="mb-2 text-lg font-medium">Upload your resume</p>
+              <p className="text-center text-sm text-muted-foreground">
                 Drag and drop your PDF or TXT file here, or click to browse
               </p>
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Supports PDF and TXT files up to 10MB
               </p>
             </div>
@@ -124,12 +124,14 @@ export function OnboardingForm({
           <DropzoneContent>
             {isParsing ? (
               <div className="flex flex-col items-center justify-center py-8">
-                <div className="animate-spin rounded-full size-8 border-b-2 border-primary mb-4"></div>
+                <div className="mb-4 size-8 animate-spin rounded-full border-b-2 border-primary"></div>
                 <p className="text-lg font-medium">Parsing your resume...</p>
                 <p className="text-sm text-muted-foreground">
                   This may take a few seconds
                 </p>
               </div>
+            ) : selectedFile ? (
+              <ResumePreview file={selectedFile} />
             ) : null}
           </DropzoneContent>
         </Dropzone>
@@ -194,7 +196,7 @@ export function OnboardingForm({
           control={form.control}
           name="isCurrentlyEmployed"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+            <FormItem className="flex flex-row items-start space-x-1 space-y-0">
               <FormControl>
                 <Checkbox
                   checked={field.value}
@@ -252,7 +254,7 @@ export function OnboardingForm({
         title="Job Preferences"
         description="What kind of roles and work arrangements are you interested in?"
       >
-        <FormGrid cols={1}>
+        <FormGrid cols={2}>
           <FormField
             control={form.control}
             name="interestedRoleTypes"
@@ -349,7 +351,7 @@ export function OnboardingForm({
               control={form.control}
               name="openToRelocation"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormItem className="flex flex-row items-start space-x-1 space-y-0">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
@@ -369,7 +371,7 @@ export function OnboardingForm({
               control={form.control}
               name="needsSponsorship"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormItem className="flex flex-row items-start space-x-1 space-y-0">
                   <FormControl>
                     <Checkbox
                       checked={field.value}

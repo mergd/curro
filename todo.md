@@ -1,9 +1,13 @@
 p0: for launch
+[ ] Fix onboarding flow - wip
+
 [ ] pagination broken for tables
 [ ] refetch when queries are updated
-[ ] Fix onboarding flow - wip
+[ ] Cron not working?
+
+
 [ ] Full text search for jobs
-[ ] Scraping not working?
+
 p1
 
 
