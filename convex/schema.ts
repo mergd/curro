@@ -22,6 +22,7 @@ export default defineSchema({
 
   userProfiles: defineTable({
     userId: v.id("users"),
+    isAdmin: v.optional(v.boolean()),
     yearsOfExperience: v.optional(v.number()),
     interests: v.optional(v.array(v.string())),
     fourFacts: v.optional(v.array(v.string())),

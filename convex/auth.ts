@@ -15,14 +15,23 @@ export const { auth, signIn, signOut, store } = convexAuth({
 });
 
 export const currentUser = query({
-  args: {},
+  async handler(ctx) {
+    return await ctx.auth.getUserIdentity();
+  },
+});
 
-  handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return null;
+export const isAdmin = query({
+  returns: v.boolean(),
+  async handler(ctx) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return false;
     }
-    return await ctx.db.get(userId);
+    const userProfile = await ctx.db
+      .query("userProfiles")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject as any))
+      .unique();
+    return userProfile?.isAdmin ?? false;
   },
 });
 

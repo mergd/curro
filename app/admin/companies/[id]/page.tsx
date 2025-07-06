@@ -52,6 +52,7 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
   const [isScrapingInProgress, setIsScrapingInProgress] = useState(false);
   const [isClearingErrors, setIsClearingErrors] = useState(false);
   const [isResettingBackoff, setIsResettingBackoff] = useState(false);
+  const isAdmin = useQuery(api.auth.isAdmin);
 
   const { id } = use(params);
   const company = useQuery(api.companies.get, { id: id as any });
@@ -62,6 +63,19 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
   const forceScrape = useAction(api.scraper.scrape);
   const clearErrors = useMutation(api.companies.clearErrors);
   const resetBackoff = useMutation(api.companies.resetBackoff);
+
+  if (isAdmin === undefined) {
+    return <CompanyDetailSkeleton />;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold">Unauthorized</h1>
+        <p>You do not have permission to view this page.</p>
+      </div>
+    );
+  }
 
   const handleForceScrape = async () => {
     if (!company) return;
@@ -635,7 +649,7 @@ function CompanyJobsTable({ companyId }: { companyId: string }) {
 
   const handleRowClick = (row: any) => {
     const job = row.original;
-    router.push(`/jobs/${job._id}`);
+    router.push(`/admin/jobs/${job._id}`);
   };
 
   if (!jobs) {

@@ -8,7 +8,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -18,6 +18,7 @@ import {
   DashboardIcon,
   ExclamationTriangleIcon,
   GearIcon,
+  PlusCircledIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "convex/react";
@@ -26,6 +27,22 @@ import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo } from "react";
 
 export default function AdminPage() {
+  const companies = useQuery(api.companies.listWithJobCounts);
+  const isAdmin = useQuery(api.auth.isAdmin);
+
+  if (isAdmin === undefined) {
+    return <div>Loading...</div>;
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="p-8">
+        <h1 className="text-2xl font-bold">Unauthorized</h1>
+        <p>You do not have permission to view this page.</p>
+      </div>
+    );
+  }
+
   const errorStats = useQuery(api.companies.getErrorStats);
 
   const tabItems: TabItem[] = useMemo(
@@ -79,12 +96,12 @@ export default function AdminPage() {
                 Manage companies and monitor scraping operations
               </p>
             </div>
-            <Link href="/admin/companies/add">
-              <Button className="">
-                <PlusIcon className="mr-2 size-4" />
+            <Button asChild>
+              <Link href="/admin/companies/add">
+                <PlusCircledIcon className="mr-2 size-4" />
                 Add Company
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>

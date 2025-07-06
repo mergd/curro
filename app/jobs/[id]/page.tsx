@@ -3,6 +3,7 @@
 import type { TabItem } from "@/components/ui/tabs";
 import type { Id } from "@/convex/_generated/dataModel";
 
+import { JobEditForm } from "@/components/jobs/job-edit-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -31,6 +32,7 @@ import {
   ExternalLinkIcon,
   FileTextIcon,
   GlobeIcon,
+  Pencil1Icon,
   PersonIcon,
 } from "@radix-ui/react-icons";
 import { useMutation, useQuery } from "convex/react";
@@ -47,11 +49,14 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
   const { id } = use(params);
   const job = useQuery(api.jobs.get, { id: id as Id<"jobs"> });
   const user = useQuery(api.auth.currentUser);
+  const isAdmin = useQuery(api.auth.isAdmin);
   const isBookmarked = useQuery(api.bookmarks.isBookmarked, {
     jobId: id as Id<"jobs">,
   });
   const addBookmark = useMutation(api.bookmarks.add);
   const removeBookmark = useMutation(api.bookmarks.remove);
+
+  const [isEditing, setIsEditing] = useState(false);
 
   const hasEmbeddableATS = useMemo(() => {
     if (!job?.company?.sourceType) return false;
@@ -114,6 +119,20 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
             <div className="h-4 bg-muted rounded animate-pulse w-full" />
             <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isEditing) {
+    return (
+      <div className="p-6">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <JobEditForm
+            job={job}
+            onCancel={() => setIsEditing(false)}
+            onSave={() => setIsEditing(false)}
+          />
         </div>
       </div>
     );
@@ -310,6 +329,17 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                       <BookmarkIcon className="size-4" />
                     )}
                     {isBookmarked ? "Bookmarked" : "Bookmark"}
+                    {isAdmin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsEditing(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Pencil1Icon className="size-4" />
+                        Edit
+                      </Button>
+                    )}
                   </Button>
                 </div>
                 <div className="flex items-center gap-2">

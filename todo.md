@@ -1,14 +1,19 @@
 p0: for launch
 [ ] Fix onboarding flow - wip
-
 [ ] pagination broken for tables
 [ ] refetch when queries are updated
-[ ] Cron not working?
-
-
+[ ] Add analytics for site and backend
 [ ] Full text search for jobs
 
+
+Lucas:
+[ ] Add lever ATS
+[ ] Simplify the stage classification [very early stage, early stage, growth stage, mature stage, ipo, other] 
+[ ] some parts of the scraping are not working – i.e. for cluely it's not pulling the comp properly
+
+
 p1
+[ ] Bring the isAdmin from the user profile to the user obj – it's more idiomatic that way
 
 
 

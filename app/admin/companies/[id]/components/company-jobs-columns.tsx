@@ -4,9 +4,65 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { api } from "@/convex/_generated/api";
 
-import { ExternalLinkIcon, EyeOpenIcon } from "@radix-ui/react-icons";
+import { ArrowClockwiseIcon } from "@phosphor-icons/react";
+import { DotsHorizontalIcon, ExternalLinkIcon } from "@radix-ui/react-icons";
+import { useAction } from "convex/react";
 import Link from "next/link";
+import { toast } from "sonner";
+
+function ActionsCell({ row }: { row: any }) {
+  const job = row.original;
+  const refetchJob = useAction(api.scraper.refetchJob);
+
+  const handleRefetch = async () => {
+    toast.info(`Refetching job: ${job.title}`);
+    const result = await refetchJob({ jobId: job._id });
+    if (result.success) {
+      toast.success("Job refetched successfully.");
+    } else {
+      toast.error(`Failed to refetch job: ${result.error}`);
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="flex size-8 p-0 data-[state=open]:bg-muted"
+        >
+          <DotsHorizontalIcon className="size-4" />
+          <span className="sr-only">Open menu</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[160px]">
+        <DropdownMenuItem asChild>
+          <Link href={`/jobs/${job._id}`}>View Job</Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={job.url} target="_blank" rel="noopener noreferrer">
+            Visit Job URL
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleRefetch}>
+          <ArrowClockwiseIcon className="mr-2 size-4" />
+          Refetch
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export const companyJobsColumns: ColumnDef<Doc<"jobs">>[] = [
   {
@@ -132,24 +188,7 @@ export const companyJobsColumns: ColumnDef<Doc<"jobs">>[] = [
   },
   {
     id: "actions",
-    header: "Actions",
-    cell: ({ row }) => {
-      const job = row.original;
-      return (
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm" className="">
-            <Link href={`/jobs/${job._id}`}>
-              <EyeOpenIcon className="size-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="ghost" size="sm" className="">
-            <Link href={job.url} target="_blank" rel="noopener noreferrer">
-              <ExternalLinkIcon className="size-4" />
-            </Link>
-          </Button>
-        </div>
-      );
-    },
+    cell: ActionsCell,
     enableSorting: false,
     enableColumnFilter: false,
   },

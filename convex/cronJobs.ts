@@ -1,55 +1,34 @@
-import { Crons } from "@convex-dev/crons";
+import { cronJobs } from "convex/server";
 import { v } from "convex/values";
 
-import { api, components, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { internalMutation } from "./_generated/server";
 
-const crons = new Crons(components.crons);
+const crons = cronJobs();
 
-export const setupCronJobs = internalMutation({
-  handler: async (ctx) => {
-    // Register a cron job to scrape all companies every 24 hours
-    await crons.register(
-      ctx,
-      {
-        kind: "cron",
-        cronspec: "0 0 * * *", // Every 24 hours at midnight
-      },
-      internal.scraper.scrapeAllCompanies,
-      {},
-      "scrapeAllCompanies",
-    );
+crons.cron(
+  "scrape all companies",
+  "0 0 * * *", // Every 24 hours at midnight
+  internal.scraper.scrapeAllCompanies,
+  {},
+);
 
-    // Register a cron job to clean up old errors every 6 hours
-    await crons.register(
-      ctx,
-      {
-        kind: "cron",
-        cronspec: "0 */12 * * *", // Every 12 hours
-      },
-      internal.cronJobs.cleanupOldErrors,
-      {},
-      "cleanupOldErrors",
-    );
+crons.cron(
+  "cleanup old errors",
+  "0 */12 * * *", // Every 12 hours
+  internal.cronJobs.cleanupOldErrors,
+  {},
+);
 
-    console.log("Cron jobs registered successfully");
-  },
-});
-
-export const listCronJobs = internalMutation({
-  handler: async (ctx) => {
-    return await crons.list(ctx);
-  },
-});
-
-export const deleteCronJob = internalMutation({
-  args: { name: v.string() },
-  handler: async (ctx, { name }) => {
-    await crons.delete(ctx, { name });
-  },
-});
+export default crons;
 
 export const cleanupOldErrors = internalMutation({
+  args: {},
+  returns: v.object({
+    totalErrorsCleaned: v.number(),
+    companiesUpdated: v.number(),
+    totalCompaniesChecked: v.number(),
+  }),
   handler: async (ctx) => {
     const companies = await ctx.db.query("companies").collect();
     const now = Date.now();

@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { api, internal } from "./_generated/api";
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, internalMutation } from "./_generated/server";
 import { AshbyAdapter } from "./adapters/ashby";
 import { GenericAdapter } from "./adapters/generic";
 import { GreenhouseAdapter } from "./adapters/greenhouse";
@@ -61,56 +61,6 @@ async function recordScrapingMetrics(
     `Recorded scraping metrics for company ${companyId}: ` +
       `${metrics.newJobsCreated || 0} new, ${metrics.existingJobsSkipped || 0} skipped, ` +
       `${metrics.jobsSoftDeleted || 0} deleted, net change: ${netJobChange}`,
-  );
-}
-
-// Helper function to add an error to the company's error log and update backoff
-async function addCompanyError(
-  ctx: any,
-  companyId: string,
-  errorType: string,
-  errorMessage: string,
-  url?: string,
-) {
-  const now = Date.now();
-  const cutoffTime = now - TWENTY_FOUR_HOURS_MS;
-
-  // Get current company data
-  const company = await ctx.runQuery(api.companies.get, { id: companyId });
-  if (!company) return;
-
-  // Filter out errors older than 24 hours and add the new error
-  const currentErrors = company.scrapingErrors || [];
-  const recentErrors = currentErrors.filter(
-    (error: any) => error.timestamp > cutoffTime,
-  );
-
-  const newError = {
-    timestamp: now,
-    errorType,
-    errorMessage,
-    url,
-  };
-
-  recentErrors.push(newError);
-
-  // Calculate new backoff info based on the failure
-  const newBackoffInfo = calculateBackoffAfterFailure(
-    company.backoffInfo,
-    errorType,
-    recentErrors,
-  );
-
-  // Update the company with the new error list and backoff info
-  await ctx.runMutation(api.companies.update, {
-    id: companyId,
-    scrapingErrors: recentErrors,
-    backoffInfo: newBackoffInfo,
-  });
-
-  console.log(
-    `Added error for company ${companyId}: ${errorType} - ${errorMessage}. ` +
-      `Recent errors: ${recentErrors.length}, Backoff: ${getBackoffStatusDescription(newBackoffInfo)}`,
   );
 }
 
@@ -261,13 +211,12 @@ export const fetchAndParseJobs = internalAction({
 
       if (!response.ok) {
         const errorMsg = `HTTP ${response.status}: ${response.statusText}`;
-        await addCompanyError(
-          ctx,
-          companyId,
-          "fetch_failed",
-          errorMsg,
-          jobBoardUrl,
-        );
+        await ctx.runMutation(internal.scraper.addCompanyError, {
+          id: companyId,
+          errorType: "fetch_failed",
+          errorMessage: errorMsg,
+          url: jobBoardUrl,
+        });
         throw new Error(errorMsg);
       }
 
@@ -302,6 +251,9 @@ export const fetchAndParseJobs = internalAction({
         const adapter = new GreenhouseAdapter();
         links = await adapter.extractJobLinks(html, jobBoardUrl);
       } else {
+        console.log(
+          `No adapter found for ${jobBoardUrl}, using generic parser`,
+        );
         const adapter = new GenericAdapter();
         links = await adapter.extractJobLinks(html, jobBoardUrl);
         atsType = "other";
@@ -430,13 +382,12 @@ export const fetchAndParseJobs = internalAction({
       console.error(`Scraping failed for ${jobBoardUrl}:`, error);
 
       // Track the error for this company
-      await addCompanyError(
-        ctx,
-        companyId,
-        "scraping_failed",
-        errorMessage,
-        jobBoardUrl,
-      );
+      await ctx.runMutation(internal.scraper.addCompanyError, {
+        id: companyId,
+        errorType: "scraping_failed",
+        errorMessage: errorMessage,
+        url: jobBoardUrl,
+      });
 
       return {
         success: false,
@@ -460,13 +411,7 @@ export const fetchJobDetails = internalAction({
     try {
       console.log(`Fetching job details from: ${jobUrl}`);
 
-      // 1. Rate limiting: Wait before making the request to avoid being banned
-      console.log(
-        `Waiting ${JOB_DETAILS_DELAY_MS}ms before fetching job details...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, JOB_DETAILS_DELAY_MS));
-
-      // 2. Fetch the individual job page
+      // 1. Fetch the individual job page
       let html: string;
 
       // Check if this is an Ashby job page that might need JSDOM
@@ -485,13 +430,12 @@ export const fetchJobDetails = internalAction({
 
           // Track the error for this company if we have the companyId
           if (companyId) {
-            await addCompanyError(
-              ctx,
-              companyId,
-              "job_fetch_failed",
-              errorMsg,
-              jobUrl,
-            );
+            await ctx.runMutation(internal.scraper.addCompanyError, {
+              id: companyId,
+              errorType: "job_fetch_failed",
+              errorMessage: errorMsg,
+              url: jobUrl,
+            });
           }
 
           return { success: false };
@@ -510,13 +454,12 @@ export const fetchJobDetails = internalAction({
 
           // Track the error for this company if we have the companyId
           if (companyId) {
-            await addCompanyError(
-              ctx,
-              companyId,
-              "job_fetch_failed",
-              errorMsg,
-              jobUrl,
-            );
+            await ctx.runMutation(internal.scraper.addCompanyError, {
+              id: companyId,
+              errorType: "job_fetch_failed",
+              errorMessage: errorMsg,
+              url: jobUrl,
+            });
           }
 
           return { success: false };
@@ -525,7 +468,7 @@ export const fetchJobDetails = internalAction({
         html = await response.text();
       }
 
-      // 3. Parse detailed job information using AI
+      // 2. Parse detailed job information using AI
       const jobDetails = await parseJobDetails(html);
 
       console.log("jobDetails", jobDetails);
@@ -560,13 +503,12 @@ export const fetchJobDetails = internalAction({
 
       // Track the error for this company if we have the companyId
       if (companyId) {
-        await addCompanyError(
-          ctx,
-          companyId,
-          "job_details_failed",
-          errorMessage,
-          jobUrl,
-        );
+        await ctx.runMutation(internal.scraper.addCompanyError, {
+          id: companyId,
+          errorType: "job_details_failed",
+          errorMessage: errorMessage,
+          url: jobUrl,
+        });
       }
 
       return {
@@ -737,5 +679,146 @@ export const clearCompanyErrors = action({
         error: errorMessage,
       };
     }
+  },
+});
+
+export const refetchJob = action({
+  args: {
+    jobId: v.id("jobs"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (
+    ctx,
+    { jobId },
+  ): Promise<{ success: boolean; error?: string }> => {
+    const isAdmin = await ctx.runQuery(api.auth.isAdmin);
+    if (!isAdmin) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const job = await ctx.runQuery(api.jobs.get, { id: jobId });
+    if (!job) {
+      return { success: false, error: "Job not found" };
+    }
+
+    if (!job.url) {
+      return { success: false, error: "Job has no URL to refetch." };
+    }
+
+    const result = await ctx.runAction(
+      internal.scraper.fetchAndParseJobDetail,
+      {
+        jobId,
+        url: job.url,
+        companyId: job.companyId,
+      },
+    );
+
+    return result;
+  },
+});
+
+export const fetchAndParseJobDetail = internalAction({
+  args: {
+    jobId: v.id("jobs"),
+    url: v.string(),
+    companyId: v.id("companies"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (
+    ctx,
+    { jobId, url, companyId },
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch job detail page: ${response.statusText}`,
+        );
+      }
+      const html = await response.text();
+
+      const parsedDetails = await parseJobDetails(html);
+
+      if (Object.keys(parsedDetails).length === 0) {
+        await ctx.runMutation(internal.scraper.addCompanyError, {
+          id: companyId,
+          errorType: "job_detail_parsing_failed",
+          errorMessage: "AI parser returned no details.",
+          url,
+        });
+        return { success: false, error: "Failed to parse job details." };
+      }
+
+      await ctx.runMutation(api.jobs.update, {
+        id: jobId,
+        ...parsedDetails,
+        lastScraped: Date.now(),
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Error refetching job ${jobId}:`, error);
+      await ctx.runMutation(internal.scraper.addCompanyError, {
+        id: companyId,
+        errorType: "job_detail_refetch_failed",
+        errorMessage: error.message,
+        url,
+      });
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+export const addCompanyError = internalMutation({
+  args: {
+    id: v.id("companies"),
+    errorType: v.string(),
+    errorMessage: v.string(),
+    url: v.optional(v.string()),
+  },
+  handler: async (ctx, { id, errorType, errorMessage, url }) => {
+    const company = await ctx.db.get(id);
+    if (!company) return;
+
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+    const cutoffTime = now - TWENTY_FOUR_HOURS_MS;
+
+    const currentErrors = company.scrapingErrors || [];
+    const recentErrors = currentErrors.filter(
+      (error: any) => error.timestamp > cutoffTime,
+    );
+
+    const newError = {
+      timestamp: now,
+      errorType,
+      errorMessage,
+      url,
+    };
+
+    recentErrors.push(newError);
+
+    const newBackoffInfo = calculateBackoffAfterFailure(
+      company.backoffInfo,
+      errorType,
+      recentErrors,
+    );
+
+    await ctx.db.patch(id, {
+      scrapingErrors: recentErrors,
+      backoffInfo: newBackoffInfo,
+    });
+
+    console.log(
+      `Added error for company ${id}: ${errorType} - ${errorMessage}. ` +
+        `Recent errors: ${recentErrors.length}, Backoff: ${getBackoffStatusDescription(newBackoffInfo)}`,
+    );
   },
 });

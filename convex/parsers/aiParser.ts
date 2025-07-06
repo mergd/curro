@@ -2,7 +2,6 @@ import { z } from "zod";
 
 import { cleanHtmlForAI, generateStructuredOnly } from "../../lib/ai";
 import {
-  COMPENSATION_TYPES,
   EDUCATION_LEVELS,
   EMPLOYMENT_TYPES,
   REMOTE_OPTIONS,
@@ -138,8 +137,7 @@ ${cleanedHtml}`;
     return await generateStructuredOnly(JobListingParseResultSchema, prompt);
   } catch (error) {
     console.error("AI parsing error:", error);
-    // Fallback to basic regex parsing
-    return fallbackParseJobListings(html);
+    return { jobs: [] };
   }
 }
 
@@ -182,7 +180,7 @@ export async function parseJobDetails(
 **Timezone Mapping Examples:**
 - Europe, European time zones → ["CEST"]
 - US East Coast, Eastern time → ["EST"]
-Be conservative - only include information that is clearly stated. If unsure, omit the field.
+Be conservative - only include information that is clearly stated. If a field's information is not present, omit the field entirely from the output. Do not use placeholders like "N/A", "missing", or "none".
 
 HTML content to parse:
 ${cleanedHtml}`;
@@ -192,40 +190,6 @@ ${cleanedHtml}`;
     console.error("AI parsing error:", error);
     return {}; // Return empty object on error
   }
-}
-
-function fallbackParseJobListings(html: string): JobListingParseResult {
-  const jobs: ParsedJob[] = [];
-
-  // Generic job link patterns that might work across different ATS systems
-  const patterns = [
-    // Ashby-style
-    /<a[^>]+href="([^"]*\/jobs\/[^"]*)"[^>]*>.*?<div[^>]*>([^<]+)<\/div>/gi,
-    // Greenhouse-style
-    /<a[^>]+href="([^"]*\/jobs\/[^"]*)"[^>]*>([^<]+)<\/a>/gi,
-    // Generic job links
-    /<a[^>]+href="([^"]*job[^"]*)"[^>]*>([^<]+)<\/a>/gi,
-  ];
-
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(html)) !== null) {
-      const url = match[1];
-      const title = match[2].trim();
-
-      if (title && url && title.length > 3 && title.length < 200) {
-        jobs.push({
-          title,
-          url,
-          description: "",
-        });
-      }
-    }
-
-    if (jobs.length > 0) break; // Use first successful pattern
-  }
-
-  return { jobs };
 }
 
 export async function parseResume(resumeText: string): Promise<ParsedResume> {

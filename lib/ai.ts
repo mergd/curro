@@ -87,31 +87,118 @@ export async function generateStructuredOnly<T>(
   return await generateStructuredOutput(schema, prompt);
 }
 
+// reduce the number of tokens by stripping unnecessary things from the html
+function stripHtml(htmlContent: string): string {
+  let content = htmlContent;
+
+  // Remove script, style, svg, and link tags
+  content = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+  content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  content = content.replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, "");
+  content = content.replace(/<link[^>]*>/gi, "");
+
+  // Remove HTML comments
+  content = content.replace(/<!--[\s\S]*?-->/g, "");
+
+  // Convert code blocks to markdown
+  content = content.replace(
+    /<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi,
+    "\n```\n$1\n```\n",
+  );
+  content = content.replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, "`$1`");
+  content = content.replace(
+    /<pre[^>]*>([\s\S]*?)<\/pre>/gi,
+    "\n```\n$1\n```\n",
+  );
+
+  // Convert headings to markdown
+  content = content.replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, "\n# $1\n");
+  content = content.replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n## $1\n");
+  content = content.replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, "\n### $1\n");
+  content = content.replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, "\n#### $1\n");
+  content = content.replace(/<h5[^>]*>([\s\S]*?)<\/h5>/gi, "\n##### $1\n");
+  content = content.replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, "\n###### $1\n");
+
+  // Convert emphasis tags
+  content = content.replace(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, "**$1**");
+  content = content.replace(/<b[^>]*>([\s\S]*?)<\/b>/gi, "**$1**");
+  content = content.replace(/<em[^>]*>([\s\S]*?)<\/em>/gi, "*$1*");
+  content = content.replace(/<i[^>]*>([\s\S]*?)<\/i>/gi, "*$1*");
+
+  // Convert links to markdown format
+  content = content.replace(
+    /<a[^>]*href\s*=\s*["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi,
+    "[$2]($1)",
+  );
+
+  // Convert lists
+  content = content.replace(/<ul[^>]*>/gi, "\n");
+  content = content.replace(/<\/ul>/gi, "\n");
+  content = content.replace(/<ol[^>]*>/gi, "\n");
+  content = content.replace(/<\/ol>/gi, "\n");
+  content = content.replace(/<li[^>]*>/gi, "• ");
+  content = content.replace(/<\/li>/gi, "\n");
+
+  // Convert paragraphs and line breaks
+  content = content.replace(/<p[^>]*>/gi, "\n");
+  content = content.replace(/<\/p>/gi, "\n\n");
+  content = content.replace(/<br[^>]*\/?>/gi, "\n");
+
+  // Replace divs and spans with newlines/spaces
+  content = content.replace(/<div[^>]*>/gi, "\n");
+  content = content.replace(/<\/div>/gi, "\n");
+  content = content.replace(/<span[^>]*>/gi, " ");
+  content = content.replace(/<\/span>/gi, " ");
+
+  // Convert tables
+  content = content.replace(/<table[^>]*>/gi, "\n");
+  content = content.replace(/<\/table>/gi, "\n");
+  content = content.replace(/<tr[^>]*>/gi, "");
+  content = content.replace(/<\/tr>/gi, "\n");
+  content = content.replace(/<td[^>]*>/gi, " | ");
+  content = content.replace(/<\/td>/gi, "");
+  content = content.replace(/<th[^>]*>/gi, " | ");
+  content = content.replace(/<\/th>/gi, "");
+  content = content.replace(/<thead[^>]*>/gi, "");
+  content = content.replace(/<\/thead>/gi, "");
+  content = content.replace(/<tbody[^>]*>/gi, "");
+  content = content.replace(/<\/tbody>/gi, "");
+
+  // Remove any remaining HTML tags
+  content = content.replace(/<\/?[^>]+>/g, " ");
+
+  // Decode common HTML entities
+  content = content.replace(/&nbsp;/g, " ");
+  content = content.replace(/&amp;/g, "&");
+  content = content.replace(/&lt;/g, "<");
+  content = content.replace(/&gt;/g, ">");
+  content = content.replace(/&quot;/g, '"');
+  content = content.replace(/&#39;/g, "'");
+  content = content.replace(/&apos;/g, "'");
+  content = content.replace(/&mdash;/g, "—");
+  content = content.replace(/&ndash;/g, "–");
+  content = content.replace(/&hellip;/g, "…");
+
+  // Clean up whitespace
+  content = content.replace(/[ \t]+/g, " ");
+  content = content.replace(/\n[ \t]+/g, "\n");
+  content = content.replace(/[ \t]+\n/g, "\n");
+  content = content.replace(/\n{3,}/g, "\n\n");
+  content = content.trim();
+
+  return content;
+}
+
 /**
  * Clean HTML for AI processing (utility function)
  */
-export function cleanHtmlForAI(html: string, maxLength: number = 6000): string {
-  // Remove script and style tags
-  let cleaned = html.replace(
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-    "",
-  );
-  cleaned = cleaned.replace(
-    /<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi,
-    "",
-  );
-
-  // Remove comments
-  cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, "");
-
-  // Remove excessive whitespace but preserve some structure
-  cleaned = cleaned.replace(/\s+/g, " ");
-  cleaned = cleaned.replace(/>\s+</g, "><");
+export function cleanHtmlForAI(html: string, maxLength: number = 8000): string {
+  let cleaned = stripHtml(html);
 
   // Truncate if too long
   if (cleaned.length > maxLength) {
-    cleaned = cleaned.substring(0, maxLength) + "...";
+    cleaned = cleaned.substring(0, maxLength);
   }
 
-  return cleaned.trim();
+  return cleaned;
 }

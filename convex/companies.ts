@@ -13,6 +13,8 @@ import {
 } from "./constants";
 import { inferSourceType } from "./utils";
 
+const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
+
 export const list = query({
   args: {},
   returns: v.array(
@@ -429,6 +431,7 @@ export const resetBackoff = mutation({
         totalFailures: 0,
       },
     });
+    console.log(`Reset backoff for company ${id}`);
     return null;
   },
 });
