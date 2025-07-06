@@ -22,6 +22,30 @@ export const authenticatedQuery = customQuery(query, authContext);
 
 export const authenticatedMutation = customMutation(mutation, authContext);
 
-export const getUserId = async (ctx: QueryCtx | MutationCtx) => {
+export async function getUserId(ctx: QueryCtx | MutationCtx) {
   return await getAuthUserId(ctx);
-};
+}
+
+// Admin protection handler
+export async function requireAdmin(ctx: QueryCtx | MutationCtx) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
+    throw new ConvexError("User not authenticated");
+  }
+
+  const user = await ctx.db.get(userId);
+  if (!user?.isAdmin) {
+    throw new ConvexError("Unauthorized: Admin access required");
+  }
+
+  return user;
+}
+
+// Admin context for mutations and queries
+const adminContext = customCtx(async (ctx: QueryCtx | MutationCtx) => {
+  const user = await requireAdmin(ctx);
+  return { adminUser: user };
+});
+
+export const adminQuery = customQuery(query, adminContext);
+export const adminMutation = customMutation(mutation, adminContext);

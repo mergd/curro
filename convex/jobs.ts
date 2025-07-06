@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { api } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
+import { requireAdmin } from "./_utils";
 import {
   COMPENSATION_TYPES,
   createUnionValidator,
@@ -190,10 +191,7 @@ export const update = mutation({
     deletedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const isAdmin = await ctx.runQuery(api.auth.isAdmin);
-    if (!isAdmin) {
-      throw new Error("Unauthorized");
-    }
+    await requireAdmin(ctx);
     const { id, ...updateData } = args;
     await ctx.db.patch(id, updateData);
   },

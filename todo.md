@@ -12,11 +12,6 @@ Lucas:
 [ ] some parts of the scraping are not working – i.e. for cluely it's not pulling the comp properly
 
 
-p1
-[ ] Bring the isAdmin from the user profile to the user obj – it's more idiomatic that way
-
-
-
 [ ] Add a function to the server to fetch the company logo from the company's website
 [ ] Add a way of ingesting HN who's hiring jobs
 [ ] Build out a more internships focused version of the app

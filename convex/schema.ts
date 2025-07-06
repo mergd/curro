@@ -20,9 +20,16 @@ import {
 export default defineSchema({
   ...authTables,
 
+  users: defineTable({
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    image: v.optional(v.string()),
+    isAdmin: v.optional(v.boolean()),
+  }).index("email", ["email"]),
+
   userProfiles: defineTable({
     userId: v.id("users"),
-    isAdmin: v.optional(v.boolean()),
     yearsOfExperience: v.optional(v.number()),
     interests: v.optional(v.array(v.string())),
     fourFacts: v.optional(v.array(v.string())),

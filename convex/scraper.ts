@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { api, internal } from "./_generated/api";
 import { action, internalAction, internalMutation } from "./_generated/server";
+import { requireAdmin } from "./_utils";
 import { AshbyAdapter } from "./adapters/ashby";
 import { GenericAdapter } from "./adapters/generic";
 import { GreenhouseAdapter } from "./adapters/greenhouse";

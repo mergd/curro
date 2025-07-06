@@ -23,15 +23,12 @@ export const currentUser = query({
 export const isAdmin = query({
   returns: v.boolean(),
   async handler(ctx) {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       return false;
     }
-    const userProfile = await ctx.db
-      .query("userProfiles")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject as any))
-      .unique();
-    return userProfile?.isAdmin ?? false;
+    const user = await ctx.db.get(userId);
+    return user?.isAdmin ?? false;
   },
 });
 
