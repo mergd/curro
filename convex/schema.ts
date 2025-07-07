@@ -297,4 +297,20 @@ export default defineSchema({
     .index("by_company", ["companyId"])
     .index("by_company_and_date", ["companyId", "scrapedAt"])
     .index("by_date", ["scrapedAt"]),
+
+  // Track user requests for adding new companies
+  companyRequests: defineTable({
+    companyName: v.string(),
+    companyWebsite: v.optional(v.string()),
+    jobBoardUrl: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+      v.literal("duplicate"),
+    ),
+    adminNotes: v.optional(v.string()),
+    processedAt: v.optional(v.number()),
+    processedBy: v.optional(v.id("users")),
+  }),
 });

@@ -4,6 +4,7 @@ import type { JobFilters } from "./components";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
+import { RequestCompanyDialog } from "@/components/request-company-dialog";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
 import { useDebouncedCallback } from "@/hooks/use-debounced-callback";
@@ -119,6 +120,7 @@ export default function JobsPage() {
               Browse and filter through all available positions
             </p>
           </div>
+          <RequestCompanyDialog />
         </div>
 
         <Suspense

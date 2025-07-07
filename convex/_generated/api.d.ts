@@ -19,6 +19,7 @@ import type * as applications from "../applications.js";
 import type * as auth from "../auth.js";
 import type * as bookmarks from "../bookmarks.js";
 import type * as companies from "../companies.js";
+import type * as companyRequests from "../companyRequests.js";
 import type * as constants from "../constants.js";
 import type * as cronJobs from "../cronJobs.js";
 import type * as http from "../http.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   bookmarks: typeof bookmarks;
   companies: typeof companies;
+  companyRequests: typeof companyRequests;
   constants: typeof constants;
   cronJobs: typeof cronJobs;
   http: typeof http;
