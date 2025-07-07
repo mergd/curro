@@ -36,7 +36,7 @@ export const onboardingSchema = z.object({
     .min(1, "Please select at least one remote option"),
 
   // Location
-  currentLocation: z.string().min(1, "Please enter your current location"),
+  currentLocation: z.string().min(1, "Please enter your current city"),
   openToRelocation: z.boolean().default(false),
   needsSponsorship: z.boolean().default(false),
   preferredTimezones: z.array(z.string()).optional(),
@@ -49,9 +49,13 @@ export const onboardingSchema = z.object({
     .string()
     .min(1, "Please select when you'd like to start"),
 
-  // Optional interests
+  // Optional interests and achievements
   interests: z.array(z.string()).optional(),
-  fourFacts: z.array(z.string()).optional(),
+  fourFacts: z
+    .array(z.string())
+    .min(4, "Please provide exactly 4 impressive facts about yourself")
+    .max(4, "Please provide exactly 4 impressive facts about yourself")
+    .optional(),
 });
 
 export type OnboardingFormData = z.infer<typeof onboardingSchema>;

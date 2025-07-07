@@ -8,9 +8,13 @@ import { JobPreviewCard } from "./job-preview-card";
 import { JobPreviewSkeleton } from "./job-preview-skeleton";
 
 export function RecentJobs() {
-  const jobs = useQuery(api.jobs.list);
+  const result = useQuery(api.jobs.listPaginated, {
+    limit: 6,
+    sortBy: "_creationTime",
+    sortOrder: "desc",
+  });
 
-  if (!jobs) {
+  if (!result) {
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -20,10 +24,7 @@ export function RecentJobs() {
     );
   }
 
-  // Show only the 6 most recent jobs
-  const recentJobs = jobs
-    .sort((a, b) => b._creationTime - a._creationTime)
-    .slice(0, 6);
+  const { jobs: recentJobs } = result;
 
   if (recentJobs.length === 0) {
     return (

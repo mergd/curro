@@ -24,7 +24,7 @@ import {
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Suspense, useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 export default function AdminPage() {
   const companies = useQuery(api.companies.listWithJobCounts);
@@ -318,20 +318,84 @@ function ErrorMonitoringContent() {
 }
 
 function CompaniesTable() {
-  const companies = useQuery(api.companies.list);
   const router = useRouter();
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [sorting, setSorting] = useState<{ id: string; desc: boolean }[]>([
+    { id: "name", desc: false },
+  ]);
+  const [previousData, setPreviousData] = useState<any>(null);
+
+  // Calculate offset for pagination
+  const offset = currentPage * pageSize;
+
+  // Get sort parameters
+  const sortBy = sorting.length > 0 ? sorting[0].id : "name";
+  const sortOrder = sorting.length > 0 && sorting[0].desc ? "desc" : "asc";
+
+  // Prepare query arguments
+  const queryArgs = useMemo(
+    () => ({
+      offset,
+      limit: pageSize,
+      sortBy,
+      sortOrder: sortOrder as "asc" | "desc",
+    }),
+    [offset, pageSize, sortBy, sortOrder],
+  );
+
+  const companiesResult = useQuery(api.companies.listPaginated, queryArgs);
+
+  // Update previous data when new data comes in
+  useEffect(() => {
+    if (companiesResult) {
+      setPreviousData(companiesResult);
+    }
+  }, [companiesResult]);
+
+  const tableData = companiesResult?.companies || previousData?.companies || [];
+  const totalCount = companiesResult?.total || previousData?.total || 0;
+  const pageCount = Math.ceil(totalCount / pageSize);
 
   const { table } = useDataTable({
-    data: companies || [],
+    data: tableData,
     columns,
-    pageCount: -1, // Client-side pagination
+    pageCount: pageCount,
     initialState: {
       sorting: [{ id: "name", desc: false }],
-      pagination: { pageIndex: 0, pageSize: 10 },
+      pagination: { pageIndex: currentPage, pageSize: pageSize },
     },
   });
 
-  if (!companies) {
+  // Sync table state with our local state
+  useEffect(() => {
+    const tablePagination = table.getState().pagination;
+    const tableSorting = table.getState().sorting;
+
+    // Update page if table pagination changed
+    if (tablePagination.pageIndex !== currentPage) {
+      setCurrentPage(tablePagination.pageIndex);
+    }
+
+    // Update page size if changed
+    if (tablePagination.pageSize !== pageSize) {
+      setPageSize(tablePagination.pageSize);
+    }
+
+    // Update sorting if changed
+    if (JSON.stringify(tableSorting) !== JSON.stringify(sorting)) {
+      setSorting(tableSorting);
+    }
+  }, [
+    table.getState().pagination.pageIndex,
+    table.getState().pagination.pageSize,
+    table.getState().sorting,
+    currentPage,
+    pageSize,
+    sorting,
+  ]);
+
+  if (!companiesResult && !previousData) {
     return <DataTableSkeleton columnCount={7} />;
   }
 

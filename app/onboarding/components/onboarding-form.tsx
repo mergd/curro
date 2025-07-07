@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CityInput } from "@/components/ui/city-input";
 import {
   FormControl,
   FormDescription,
@@ -20,6 +21,7 @@ import {
   DropzoneContent,
   DropzoneEmptyState,
 } from "@/components/ui/kibo-ui/dropzone";
+import { Logo } from "@/components/ui/logo";
 import { MultiSelect } from "@/components/ui/multi-tag-select";
 import {
   Select,
@@ -67,11 +69,13 @@ export function OnboardingForm({
   isParsing,
 }: OnboardingFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const handleFileUpload = async (files: File[]) => {
     if (files.length === 0) return;
     setSelectedFile(files[0]);
     await onFileUpload(files);
+    setUploadedFile(files[0]);
   };
 
   const remoteOptions = REMOTE_OPTIONS.map((option) => ({
@@ -90,6 +94,7 @@ export function OnboardingForm({
 
   return (
     <FormLayout>
+      <Logo />
       <FormSection title="Complete Your Profile">
         Tell us about yourself and your job preferences to get better job
         recommendations.
@@ -108,18 +113,36 @@ export function OnboardingForm({
           disabled={isParsing}
         >
           <DropzoneEmptyState>
-            <div className="flex flex-col items-center justify-center py-8">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                <UploadIcon size={24} />
+            {!uploadedFile ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="mb-4 flex size-12 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                  <UploadIcon size={24} />
+                </div>
+                <p className="mb-2 text-lg font-medium">Upload your resume</p>
+                <p className="text-center text-sm text-muted-foreground">
+                  Drag and drop your PDF or TXT file here, or click to browse
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Supports PDF and TXT files up to 10MB
+                </p>
               </div>
-              <p className="mb-2 text-lg font-medium">Upload your resume</p>
-              <p className="text-center text-sm text-muted-foreground">
-                Drag and drop your PDF or TXT file here, or click to browse
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Supports PDF and TXT files up to 10MB
-              </p>
-            </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="mb-4 flex size-12 items-center justify-center rounded-md bg-green-100 text-green-600">
+                  <CheckIcon size={24} />
+                </div>
+                <p className="mb-2 text-lg font-medium text-green-700">
+                  Resume uploaded successfully!
+                </p>
+                <p className="text-center text-sm text-muted-foreground">
+                  {uploadedFile.name} ({Math.round(uploadedFile.size / 1024)}{" "}
+                  KB)
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Drop a new file to replace
+                </p>
+              </div>
+            )}
           </DropzoneEmptyState>
           <DropzoneContent>
             {isParsing ? (
@@ -328,90 +351,92 @@ export function OnboardingForm({
         title="Location & Logistics"
         description="Tell us about your location preferences and work authorization."
       >
-        <FormGrid cols={1}>
+        <FormField
+          control={form.control}
+          name="currentLocation"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Current Location</FormLabel>
+              <FormControl>
+                <CityInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  placeholder="e.g., San Francisco, USA"
+                />
+              </FormControl>
+              <FormDescription>
+                Enter your current city and country
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="space-y-3">
           <FormField
             control={form.control}
-            name="currentLocation"
+            name="openToRelocation"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-1 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    I&apos;m open to relocating for the right opportunity
+                  </FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="needsSponsorship"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-1 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    I need work authorization/visa sponsorship
+                  </FormLabel>
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        {includesRemote && (
+          <FormField
+            control={form.control}
+            name="preferredTimezones"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Current Location</FormLabel>
+                <FormLabel>Preferred Time Zones (for remote work)</FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., San Francisco, USA" {...field} />
+                  <MultiSelect
+                    options={timezoneOptions}
+                    value={field.value || []}
+                    onValueChange={field.onChange}
+                    placeholder="Select time zones you're comfortable working in"
+                  />
                 </FormControl>
                 <FormDescription>
-                  Format: City, Country (e.g., San Francisco, USA)
+                  Select time zones you&apos;re comfortable working in
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-
-          <div className="space-y-3">
-            <FormField
-              control={form.control}
-              name="openToRelocation"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-1 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      I&apos;m open to relocating for the right opportunity
-                    </FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="needsSponsorship"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-1 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      I need work authorization/visa sponsorship
-                    </FormLabel>
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {includesRemote && (
-            <FormField
-              control={form.control}
-              name="preferredTimezones"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preferred Time Zones (for remote work)</FormLabel>
-                  <FormControl>
-                    <MultiSelect
-                      options={timezoneOptions}
-                      value={field.value || []}
-                      onValueChange={field.onChange}
-                      placeholder="Select time zones you're comfortable working in"
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Select time zones you&apos;re comfortable working in
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
-        </FormGrid>
+        )}
       </FormSection>
 
       {/* Goals */}
@@ -472,6 +497,47 @@ export function OnboardingForm({
             )}
           />
         </FormGrid>
+      </FormSection>
+
+      {/* Four Impressive Facts */}
+      <FormSection
+        title="Four Impressive Facts About You"
+        description="Share your most impressive achievements, skills, or experiences that make you stand out."
+      >
+        <FormField
+          control={form.control}
+          name="fourFacts"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Your Four Most Impressive Facts</FormLabel>
+              <div className="space-y-3">
+                {[0, 1, 2, 3].map((index) => (
+                  <div key={index}>
+                    <FormControl>
+                      <Input
+                        placeholder={`Impressive fact #${index + 1}`}
+                        value={field.value?.[index] || ""}
+                        onChange={(e) => {
+                          const newFacts = [
+                            ...(field.value || ["", "", "", ""]),
+                          ];
+                          newFacts[index] = e.target.value;
+                          field.onChange(newFacts);
+                        }}
+                      />
+                    </FormControl>
+                  </div>
+                ))}
+              </div>
+              <FormDescription>
+                Examples: "Built an app with 10K+ users and was featured in the
+                NYT", "Created a sick job board app", "Fastest Triathlete in
+                California"
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
       </FormSection>
 
       {/* Form Actions */}

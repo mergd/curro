@@ -208,7 +208,18 @@ export default defineSchema({
   })
     .index("by_company", ["companyId"])
     .index("by_fetched", ["isFetched"])
-    .index("by_first_seen", ["firstSeenAt"]),
+    .index("by_first_seen", ["firstSeenAt"])
+    .searchIndex("search_jobs", {
+      searchField: "title",
+      filterFields: [
+        "companyId",
+        "roleType",
+        "employmentType",
+        "remoteOptions",
+        "isFetched",
+        "deletedAt",
+      ],
+    }),
 
   applications: defineTable({
     userId: v.id("users"),

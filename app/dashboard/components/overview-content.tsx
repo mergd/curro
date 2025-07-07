@@ -79,33 +79,6 @@ export function OverviewContent() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card className="p-6">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button asChild variant="outline" className="h-20 flex-col gap-2">
-              <Link href="/jobs">
-                <DashboardIcon className="size-6" />
-                Browse Jobs
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-20 flex-col gap-2">
-              <Link href="/dashboard?tab=bookmarks">
-                <BookmarkIcon className="size-6" />
-                View Bookmarks
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="h-20 flex-col gap-2">
-              <Link href="/dashboard/profile">
-                <PersonIcon className="size-6" />
-                Update Profile
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </Card>
-
       {/* Recent Activity */}
       {totalBookmarks > 0 && (
         <Card className="p-6">

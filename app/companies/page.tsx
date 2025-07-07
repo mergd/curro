@@ -1,10 +1,9 @@
 "use client";
 
-import type { CompanyFilters, CompanyWithJobCount } from "./components";
+import type { CompanyFilters } from "./components";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
-import { Header } from "@/components/ui/header";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
 
@@ -55,9 +54,7 @@ export default function CompaniesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
+    <div>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="flex items-center justify-between">
           <div>

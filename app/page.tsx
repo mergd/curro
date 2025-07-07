@@ -8,9 +8,9 @@ import { Logo } from "@/components/ui/logo";
 import { LogoCloud } from "@/components/ui/logo-cloud";
 
 import { ArrowRightIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { motion } from "framer-motion";
 import Link from "next/link";
-import { Suspense } from "react";
+import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
 
 export default function HomePage() {
   return (
@@ -46,7 +46,7 @@ export default function HomePage() {
           <Item>
             <div className="flex justify-center gap-8">
               <StatsCard number="500+" label="Active Jobs" color="blue" />
-              <StatsCard number="100+" label="Companies" color="purple" />
+              <StatsCard number="20+" label="Companies" color="purple" />
               <StatsCard number="24/7" label="Updates" color="green" />
             </div>
           </Item>
@@ -127,10 +127,30 @@ export default function HomePage() {
 }
 
 function SearchBar() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const router = useRouter();
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Get search value and redirect to /jobs?search=query
-    console.log("Search functionality to be implemented");
+
+    if (!searchQuery.trim()) {
+      // If empty search, just navigate to jobs page
+      router.push("/jobs");
+      return;
+    }
+
+    setIsSearching(true);
+
+    // Navigate to jobs page with search query
+    const searchParams = new URLSearchParams();
+    searchParams.set("search", searchQuery.trim());
+    router.push(`/jobs?${searchParams.toString()}`);
+
+    // Reset searching state after a short delay to allow navigation
+    setTimeout(() => {
+      setIsSearching(false);
+    }, 100);
   };
 
   return (
@@ -139,13 +159,24 @@ function SearchBar() {
       <Input
         type="text"
         placeholder="Search for jobs, companies, or roles..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
         className="pl-12 pr-24 py-5 text-lg rounded-full border-2 focus:border-primary focus-visible:ring-0"
+        disabled={isSearching}
       />
       <Button
         type="submit"
         className="absolute right-1 top-1/2 transform -translate-y-1/2 rounded-full cursor-pointer hover:scale-105 transition-transform duration-200"
+        disabled={isSearching}
       >
-        Search
+        {isSearching ? (
+          <div className="flex items-center gap-2">
+            <div className="size-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            <span>Searching...</span>
+          </div>
+        ) : (
+          "Search"
+        )}
       </Button>
     </form>
   );

@@ -19,9 +19,7 @@ export default function OnboardingPage() {
   const user = useQuery(api.auth.currentUser);
   const userProfile = useQuery(api.userProfiles.get);
   const updateProfile = useMutation(api.userProfiles.update);
-  const generateUploadUrl = useMutation(api.resumes.generateUploadUrl);
-  const saveStorageId = useMutation(api.resumes.saveStorageId);
-  const parseResume = useAction(api.userProfiles.parseResumeFromStorage);
+  const parseResume = useAction(api.userProfiles.parseResumeFromText);
 
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +38,7 @@ export default function OnboardingPage() {
       lookingForInNextCompany: "",
       desiredStartMonth: "",
       interests: [],
-      fourFacts: [],
+      fourFacts: ["", "", "", ""],
       preferredTimezones: [],
     },
   } as const);
@@ -66,23 +64,11 @@ export default function OnboardingPage() {
     setIsParsing(true);
 
     try {
-      // Upload file to Convex storage
-      const uploadUrl = await generateUploadUrl();
-      const result = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
-      if (!result.ok) {
-        throw new Error("Failed to upload file");
-      }
-
-      const { storageId } = await result.json();
-      await saveStorageId({ storageId });
+      // Read file content as text
+      const resumeText = await file.text();
 
       // Parse the resume
-      const parsedData = await parseResume({ storageId });
+      const parsedData = await parseResume({ resumeText });
 
       // Pre-populate form with parsed data
       if (parsedData.yearsOfExperience) {
@@ -112,8 +98,10 @@ export default function OnboardingPage() {
       if (parsedData.interests && parsedData.interests.length > 0) {
         form.setValue("interests", parsedData.interests);
       }
-      if (parsedData.keyAchievements && parsedData.keyAchievements.length > 0) {
-        form.setValue("fourFacts", parsedData.keyAchievements);
+      if (parsedData.fourFacts && parsedData.fourFacts.length > 0) {
+        // Ensure we have exactly 4 facts, pad with empty strings if needed
+        const facts = [...parsedData.fourFacts, "", "", "", ""].slice(0, 4);
+        form.setValue("fourFacts", facts);
       }
 
       toast.success(

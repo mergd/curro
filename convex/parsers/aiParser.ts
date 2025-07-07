@@ -111,7 +111,7 @@ const ParsedResumeSchema = z.object({
   interests: z.array(z.string()).optional(),
 
   // Notable achievements or facts
-  keyAchievements: z.array(z.string()).optional(),
+  fourFacts: z.array(z.string()).optional(),
 });
 
 export type ParsedJob = z.infer<typeof ParsedJobSchema>;
@@ -211,7 +211,7 @@ export async function parseResume(resumeText: string): Promise<ParsedResume> {
    - Professional interests or areas of expertise
    - Limit to 5-8 most relevant items each
 
-6. **Key Achievements**: Extract 3-4 most impressive accomplishments, projects, or notable facts about their career
+6. **Key Achievements**: Extract 4 most impressive accomplishments, projects, or notable facts about their career
 
 **Location Normalization Examples:**
 - SF, San Francisco, Bay Area → "San Francisco, USA"
@@ -223,8 +223,6 @@ Be conservative - only extract information that is clearly stated. If unsure abo
 
 Resume text to parse:
 ${resumeText}`;
-
-    console.log(prompt);
 
     return await generateStructuredOnly(ParsedResumeSchema, prompt);
   } catch (error) {

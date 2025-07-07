@@ -1,6 +1,6 @@
 "use client";
 
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import type { ColumnDef } from "@tanstack/react-table";
 
 import { DataTableColumnHeader } from "@/components/data-table/data-table-column-header";
@@ -25,35 +25,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { toast } from "sonner";
 
-type Company = {
-  _id: string;
-  _creationTime: number;
-  name: string;
-  website?: string;
-  logoUrl?: string;
-  jobBoardUrl: string;
-  sourceType: string;
-  lastScraped?: number;
-  numberOfEmployees?: string;
-  stage?: string;
-  category?: string[];
-  subcategory?: string[];
-  tags?: string[];
-  locations?: string[];
-  scrapingErrors?: Array<{
-    timestamp: number;
-    errorType: string;
-    errorMessage: string;
-    url?: string;
-  }>;
-  backoffInfo?: {
-    level: number;
-    nextAllowedScrape: number;
-    consecutiveFailures: number;
-    lastSuccessfulScrape?: number;
-    totalFailures: number;
-  };
-};
+type Company = Doc<"companies">;
 
 // Helper to determine if a company is problematic
 const isProblematic = (company: Company) => {

@@ -78,8 +78,8 @@ export const update = mutation({
   },
 });
 
-export const parseResumeFromStorage = action({
-  args: { storageId: v.string() },
+export const parseResumeFromText = action({
+  args: { resumeText: v.string() },
   returns: v.object({
     // Personal info
     fullName: v.optional(v.string()),
@@ -102,21 +102,12 @@ export const parseResumeFromStorage = action({
     interests: v.optional(v.array(v.string())),
 
     // Notable achievements
-    keyAchievements: v.optional(v.array(v.string())),
+    fourFacts: v.optional(v.array(v.string())),
   }),
   handler: async (ctx, args) => {
     try {
-      // Get the file from storage
-      const blob = await ctx.storage.get(args.storageId);
-      if (!blob) {
-        throw new Error("File not found in storage");
-      }
-
-      // Convert blob to text
-      const resumeText = await blob.text();
-
       // Parse the resume using AI
-      const parsedData = await parseResume(resumeText);
+      const parsedData = await parseResume(args.resumeText);
 
       return parsedData;
     } catch (error) {

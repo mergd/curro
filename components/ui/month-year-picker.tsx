@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 
 import { CalendarIcon, XIcon } from "@phosphor-icons/react";
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 
 interface MonthYearPickerProps {
   value?: string;
@@ -67,22 +67,48 @@ export const MonthYearPicker = forwardRef<
     const currentMonth = currentDate ? currentDate.getMonth() : null;
     const currentYear = currentDate ? currentDate.getFullYear() : null;
 
-    // Generate year options (current year - 20 years to current year)
+    // Local state for tracking selections
+    const [selectedMonth, setSelectedMonth] = useState<number | null>(
+      currentMonth,
+    );
+    const [selectedYear, setSelectedYear] = useState<number | null>(
+      currentYear,
+    );
+
+    // Update local state when value changes externally
+    useEffect(() => {
+      setSelectedMonth(currentMonth);
+      setSelectedYear(currentYear);
+    }, [currentMonth, currentYear]);
+
+    // Generate year options (current year - 20 years to current year + 5 years)
     const currentYearActual = new Date().getFullYear();
-    const years = Array.from({ length: 20 }, (_, i) => currentYearActual - i);
+    const years = Array.from(
+      { length: 26 },
+      (_, i) => currentYearActual + 5 - i,
+    );
 
     const handleMonthChange = (month: string) => {
       const monthIndex = MONTHS.indexOf(month);
-      if (currentYear && monthIndex !== -1) {
-        const formattedMonth = String(monthIndex + 1).padStart(2, "0");
-        onChange(`${currentYear}-${formattedMonth}`);
+      if (monthIndex !== -1) {
+        setSelectedMonth(monthIndex);
+
+        // If we have a year selected, update the value immediately
+        if (selectedYear !== null) {
+          const formattedMonth = String(monthIndex + 1).padStart(2, "0");
+          onChange(`${selectedYear}-${formattedMonth}`);
+        }
       }
     };
 
     const handleYearChange = (year: string) => {
-      if (currentMonth !== null) {
-        const formattedMonth = String(currentMonth + 1).padStart(2, "0");
-        onChange(`${year}-${formattedMonth}`);
+      const yearNumber = parseInt(year);
+      setSelectedYear(yearNumber);
+
+      // If we have a month selected, update the value immediately
+      if (selectedMonth !== null) {
+        const formattedMonth = String(selectedMonth + 1).padStart(2, "0");
+        onChange(`${yearNumber}-${formattedMonth}`);
       }
     };
 
@@ -93,6 +119,8 @@ export const MonthYearPicker = forwardRef<
 
     const handleClear = (e: React.MouseEvent) => {
       e.stopPropagation();
+      setSelectedMonth(null);
+      setSelectedYear(null);
       onChange("");
     };
 
@@ -122,7 +150,7 @@ export const MonthYearPicker = forwardRef<
             <div className="space-y-2">
               <label className="text-sm font-medium">Month</label>
               <Select
-                value={currentMonth !== null ? MONTHS[currentMonth] : ""}
+                value={selectedMonth !== null ? MONTHS[selectedMonth] : ""}
                 onValueChange={handleMonthChange}
               >
                 <SelectTrigger className="w-32">
@@ -141,14 +169,14 @@ export const MonthYearPicker = forwardRef<
             <div className="space-y-2">
               <label className="text-sm font-medium">Year</label>
               <Select
-                value={currentYear?.toString() || ""}
+                value={selectedYear?.toString() || ""}
                 onValueChange={handleYearChange}
               >
                 <SelectTrigger className="w-20">
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent className="max-h-48">
-                  {years.reverse().map((year) => (
+                  {years.map((year) => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>

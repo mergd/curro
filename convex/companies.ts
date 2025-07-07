@@ -155,6 +155,208 @@ export const listWithJobCounts = query({
   },
 });
 
+export const listPaginated = query({
+  args: {
+    // Pagination
+    offset: v.optional(v.number()),
+    limit: v.optional(v.number()),
+    // Search
+    searchQuery: v.optional(v.string()),
+    // Filters
+    sourceType: v.optional(v.array(v.string())),
+    stage: v.optional(v.array(v.string())),
+    numberOfEmployees: v.optional(v.array(v.string())),
+    category: v.optional(v.array(v.string())),
+    // Sorting
+    sortBy: v.optional(v.string()),
+    sortOrder: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
+  returns: v.object({
+    companies: v.array(
+      v.object({
+        _id: v.id("companies"),
+        _creationTime: v.number(),
+        name: v.string(),
+        description: v.optional(v.string()),
+        foundedYear: v.optional(v.number()),
+        website: v.optional(v.string()),
+        logoUrl: v.optional(v.string()),
+        jobBoardUrl: v.string(),
+        sourceType: createUnionValidator(SOURCE_TYPES),
+        lastScraped: v.optional(v.number()),
+        numberOfEmployees: v.optional(v.string()),
+        stage: v.optional(createUnionValidator(COMPANY_STAGES)),
+        category: v.optional(v.array(createUnionValidator(COMPANY_CATEGORIES))),
+        subcategory: v.optional(v.array(v.string())),
+        tags: v.optional(v.array(v.string())),
+        recentFinancing: v.optional(
+          v.object({
+            amount: v.number(),
+            date: v.string(),
+          }),
+        ),
+        investors: v.optional(v.array(v.string())),
+        recentHires: v.optional(
+          v.array(
+            v.object({
+              name: v.string(),
+              title: v.string(),
+            }),
+          ),
+        ),
+        locations: v.optional(v.array(v.string())),
+        scrapingErrors: v.optional(
+          v.array(
+            v.object({
+              timestamp: v.number(),
+              errorType: v.string(),
+              errorMessage: v.string(),
+              url: v.optional(v.string()),
+            }),
+          ),
+        ),
+        backoffInfo: v.optional(
+          v.object({
+            level: v.number(),
+            nextAllowedScrape: v.number(),
+            consecutiveFailures: v.number(),
+            lastSuccessfulScrape: v.optional(v.number()),
+            totalFailures: v.number(),
+          }),
+        ),
+      }),
+    ),
+    total: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const {
+      offset = 0,
+      limit = 15,
+      searchQuery,
+      sourceType,
+      stage,
+      numberOfEmployees,
+      category,
+      sortBy = "name",
+      sortOrder = "asc",
+    } = args;
+
+    // Get all companies first
+    const allCompanies = await ctx.db.query("companies").collect();
+
+    // Apply filters
+    const filteredCompanies = allCompanies.filter((company) => {
+      // Search query filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          company.name.toLowerCase().includes(query) ||
+          company.description?.toLowerCase().includes(query) ||
+          company.website?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Source type filter
+      if (sourceType && sourceType.length > 0) {
+        if (!sourceType.includes(company.sourceType)) return false;
+      }
+
+      // Stage filter
+      if (stage && stage.length > 0) {
+        if (!stage.includes(company.stage || "")) return false;
+      }
+
+      // Company size filter
+      if (numberOfEmployees && numberOfEmployees.length > 0) {
+        if (!numberOfEmployees.includes(company.numberOfEmployees || ""))
+          return false;
+      }
+
+      // Category filter
+      if (category && category.length > 0) {
+        if (!company.category?.some((cat) => category.includes(cat)))
+          return false;
+      }
+
+      return true;
+    });
+
+    // Sort the filtered companies
+    const sortedCompanies = filteredCompanies.sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortBy) {
+        case "name":
+          aValue = a.name;
+          bValue = b.name;
+          break;
+        case "_creationTime":
+          aValue = a._creationTime;
+          bValue = b._creationTime;
+          break;
+        case "lastScraped":
+          aValue = a.lastScraped || 0;
+          bValue = b.lastScraped || 0;
+          break;
+        case "sourceType":
+          aValue = a.sourceType;
+          bValue = b.sourceType;
+          break;
+        case "stage":
+          aValue = a.stage || "";
+          bValue = b.stage || "";
+          break;
+        case "numberOfEmployees":
+          aValue = a.numberOfEmployees || "";
+          bValue = b.numberOfEmployees || "";
+          break;
+        case "backoffStatus":
+          // Sort by backoff level for backoffStatus column
+          aValue = a.backoffInfo?.level || 0;
+          bValue = b.backoffInfo?.level || 0;
+          break;
+        case "status":
+          // Sort by problematic status (problematic companies first when desc)
+          const aProblematic =
+            (a.backoffInfo?.level && a.backoffInfo.level >= 3) ||
+            (a.scrapingErrors &&
+              a.scrapingErrors.filter(
+                (e) => e.timestamp > Date.now() - 24 * 60 * 60 * 1000,
+              ).length >= 10);
+          const bProblematic =
+            (b.backoffInfo?.level && b.backoffInfo.level >= 3) ||
+            (b.scrapingErrors &&
+              b.scrapingErrors.filter(
+                (e) => e.timestamp > Date.now() - 24 * 60 * 60 * 1000,
+              ).length >= 10);
+          aValue = aProblematic ? 1 : 0;
+          bValue = bProblematic ? 1 : 0;
+          break;
+        default:
+          aValue = a.name;
+          bValue = b.name;
+      }
+
+      if (sortOrder === "asc") {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+
+    // Apply pagination
+    const paginatedCompanies = sortedCompanies.slice(offset, offset + limit);
+
+    return {
+      companies: paginatedCompanies,
+      total: filteredCompanies.length,
+      hasMore: offset + limit < filteredCompanies.length,
+    };
+  },
+});
+
 export const get = query({
   args: { id: v.id("companies") },
   returns: v.union(

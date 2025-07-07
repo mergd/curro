@@ -61,25 +61,37 @@ interface JobsFilterProps {
 interface JobsSearchProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
+  isSearching?: boolean;
 }
 
-// todo: full text search for jobs
-export function JobsSearch({ searchQuery, onSearchChange }: JobsSearchProps) {
+export function JobsSearch({
+  searchQuery,
+  onSearchChange,
+  isSearching,
+}: JobsSearchProps) {
   return (
     <Card className="p-4 mb-4">
       <div className="space-y-2">
-        <Label htmlFor="global-search" className="text-sm font-medium">
-          Search Jobs
-        </Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="global-search" className="text-sm font-medium">
+            Search Jobs
+          </Label>
+          {isSearching && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="size-3 border-2 border-muted-foreground/20 border-t-muted-foreground rounded-full animate-spin" />
+              <span>Searching...</span>
+            </div>
+          )}
+        </div>
         <Input
           id="global-search"
-          placeholder="Search by job title, company, or location..."
+          placeholder="Search job titles, companies, locations..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="text-base"
         />
         <p className="text-xs text-muted-foreground">
-          Search across job titles, company names, locations, and role types
+          Full-text search across job titles with intelligent filtering
         </p>
       </div>
     </Card>

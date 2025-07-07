@@ -289,7 +289,7 @@ export function useDataTable<TData>(props: UseDataTableProps<TData>) {
     getFacetedRowModel: getFacetedRowModel(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
-    manualPagination: false,
+    manualPagination: pageCount > -1, // Enable manual pagination when pageCount is provided
     manualSorting: false,
     manualFiltering: false,
   });
