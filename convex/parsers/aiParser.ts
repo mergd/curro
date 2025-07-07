@@ -8,6 +8,14 @@ import {
   ROLE_TYPES,
 } from "../../lib/constants";
 
+// Error detection schema
+const ContentErrorSchema = z.object({
+  hasError: z.boolean(),
+  errorType: z.string().optional(),
+  errorMessage: z.string().optional(),
+  canProceed: z.boolean(),
+});
+
 // Zod schemas for structured parsing
 const ParsedJobSchema = z.object({
   title: z.string(),
@@ -110,42 +118,14 @@ export type ParsedJob = z.infer<typeof ParsedJobSchema>;
 export type JobListingParseResult = z.infer<typeof JobListingParseResultSchema>;
 export type JobDetailParseResult = z.infer<typeof JobDetailParseResultSchema>;
 export type ParsedResume = z.infer<typeof ParsedResumeSchema>;
-
-export async function parseJobListings(
-  html: string,
-): Promise<JobListingParseResult> {
-  try {
-    const cleanedHtml = cleanHtmlForAI(html, 6000);
-
-    const prompt = `Extract job listings from this HTML content. Focus on finding:
-1. Job titles and their URLs/links
-2. Brief descriptions if visible on the listing page
-3. Location information if mentioned - normalize to "City, XXX" format where XXX is 3-char country code
-4. Any other details that are clearly visible
-
-Only include jobs that have both a title and a URL. Convert relative URLs to be relative to the current page.
-
-For locations, normalize common abbreviations:
-- SF, San Francisco → "San Francisco, USA"
-- NYC, New York → "New York City, USA"
-- London → "London, GBR"
-- Berlin → "Berlin, DEU"
-
-HTML content to parse:
-${cleanedHtml}`;
-
-    return await generateStructuredOnly(JobListingParseResultSchema, prompt);
-  } catch (error) {
-    console.error("AI parsing error:", error);
-    return { jobs: [] };
-  }
-}
+export type ContentError = z.infer<typeof ContentErrorSchema>;
 
 export async function parseJobDetails(
   html: string,
 ): Promise<JobDetailParseResult> {
   try {
-    const cleanedHtml = cleanHtmlForAI(html, 12000);
+    const cleanedHtml = cleanHtmlForAI(html);
+    console.log("cleanedHtml", cleanedHtml);
 
     const educationLevelsList = EDUCATION_LEVELS.map(
       (level) => `"${level}"`,
@@ -163,11 +143,11 @@ export async function parseJobDetails(
 1. **Education Requirements**: Look for mentions of degree requirements. Use proper case format: ${educationLevelsList}
 2. **Experience**: Extract years of experience required (e.g., "2-5 years", "3+ years")
 3. **Role Type**: Categorize the role using proper case format: ${roleTypesList}
-4. **Role Subcategory**: For software engineering roles, specify subcategory like "fullstack", "backend", "frontend", "mobile", "devops", "ml-engineer", "security", "platform", etc. For other roles, use relevant subcategories.
+4. **Role Subcategory**: For software engineering roles, specify subcategory like "Fullstack", "Backend", "Frontend", "Mobile", "Devops", "ML Engineer", "Security", "Platform", etc. For other roles, use relevant subcategories.
 5. **Employment Type**: Determine the employment type using proper case format: ${employmentTypesList}
 6. **Internship Requirements**: If employment type is "Internship", extract any graduation requirements
 7. **Location**: Extract all mentioned locations in the format "City, XXX" where XXX is the 3-character country code (e.g., "San Francisco, USA", "London, GBR", "Berlin, DEU"). Normalize city names (SF → San Francisco, NYC → New York City).
-8. **Compensation**: Look for salary information and categorize as annual, hourly, weekly, or monthly. Extract min/max ranges and currency.
+8. **Compensation**: Look for salary information and categorize as "annual", "hourly", "weekly", or "monthly" (lowercase). Extract min/max ranges and currency. Internships are generally hourly.
 9. **Remote Work**: Determine if the position is using proper case format: ${remoteOptionsList}
 10. **Remote Timezone Preferences**: If remote/hybrid, look for timezone preferences. Convert regions to common timezone abbreviations (Europe → CEST, US East Coast → EST, US West Coast → PST, etc.)
 11. **Equity**: Look for mentions of stock options, equity, ownership percentage, or equity compensation
@@ -180,7 +160,16 @@ export async function parseJobDetails(
 **Timezone Mapping Examples:**
 - Europe, European time zones → ["CEST"]
 - US East Coast, Eastern time → ["EST"]
+
+**Compensation Format Examples:**
+- Annual salary: {"type": "annual", "min": 80000, "max": 120000, "currency": "USD"}
+- Hourly wage: {"type": "hourly", "min": 25, "max": 40, "currency": "USD"}
+
 Be conservative - only include information that is clearly stated. If a field's information is not present, omit the field entirely from the output. Do not use placeholders like "N/A", "missing", or "none".
+
+If there is no information in the job posting, return an empty object.
+
+Make sure that the job description is not empty - and is formatted well (no blobs of text please). If you need to summarize or truncate that's fine
 
 HTML content to parse:
 ${cleanedHtml}`;
@@ -188,7 +177,7 @@ ${cleanedHtml}`;
     return await generateStructuredOnly(JobDetailParseResultSchema, prompt);
   } catch (error) {
     console.error("AI parsing error:", error);
-    return {}; // Return empty object on error
+    throw error;
   }
 }
 

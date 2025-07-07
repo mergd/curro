@@ -2,7 +2,6 @@ import { v } from "convex/values";
 
 import { api, internal } from "./_generated/api";
 import { action, internalAction, internalMutation } from "./_generated/server";
-import { requireAdmin } from "./_utils";
 import { AshbyAdapter } from "./adapters/ashby";
 import { GenericAdapter } from "./adapters/generic";
 import { GreenhouseAdapter } from "./adapters/greenhouse";
@@ -223,9 +222,6 @@ export const fetchAndParseJobs = internalAction({
 
       html = await response.text();
 
-      console.log("HTML fetched, length:", html.length);
-      console.log("HTML:", html.slice(0, 20000));
-
       // 3. Extract job links based on known sourceType
       let links: string[] = [];
       let atsType = sourceType;
@@ -311,7 +307,7 @@ export const fetchAndParseJobs = internalAction({
         });
 
         if (existingJob) {
-          await ctx.runMutation(api.jobs.update, {
+          await ctx.runMutation(internal.jobs.updateInternal, {
             id: existingJob._id,
             lastScraped: now,
           });
@@ -404,7 +400,14 @@ export const fetchJobDetails = internalAction({
     jobUrl: v.string(),
     atsType: v.optional(v.string()),
   },
-  handler: async (ctx, { jobId, jobUrl, atsType }) => {
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (
+    ctx,
+    { jobId, jobUrl, atsType },
+  ): Promise<{ success: boolean; error?: string }> => {
     // Get the job to find the company ID for error tracking
     const job = await ctx.runQuery(api.jobs.get, { id: jobId });
     const companyId = job?.companyId;
@@ -418,15 +421,16 @@ export const fetchJobDetails = internalAction({
       // Check if this is an Ashby job page that might need JSDOM
       if (atsType === SOURCE_TYPES[0]) {
         console.log("Ashby job page detected, using JSDOM for job details");
-        const jsdomResult = await ctx.runAction(
-          internal.adapters.jsdom.scrapeWithJSDOM,
-          { url: jobUrl, waitTime: 1000 },
-        );
+        const jsdomResult: { success: boolean; html?: string; error?: string } =
+          await ctx.runAction(internal.adapters.jsdom.scrapeWithJSDOM, {
+            url: jobUrl,
+            waitTime: 1000,
+          });
 
         if (jsdomResult.success && jsdomResult.html) {
           html = jsdomResult.html;
         } else {
-          const errorMsg = `Failed to fetch Ashby job details with JSDOM: ${jsdomResult.error}`;
+          const errorMsg: string = `Failed to fetch Ashby job details with JSDOM: ${jsdomResult.error}`;
           console.error(errorMsg);
 
           // Track the error for this company if we have the companyId
@@ -439,7 +443,7 @@ export const fetchJobDetails = internalAction({
             });
           }
 
-          return { success: false };
+          return { success: false, error: errorMsg };
         }
       } else {
         // Use regular fetch for non-Ashby pages
@@ -463,7 +467,7 @@ export const fetchJobDetails = internalAction({
             });
           }
 
-          return { success: false };
+          return { success: false, error: errorMsg };
         }
 
         html = await response.text();
@@ -480,7 +484,7 @@ export const fetchJobDetails = internalAction({
         const { url, ...updateableFields } = jobDetails;
 
         if (Object.keys(updateableFields).length > 0) {
-          await ctx.runMutation(api.jobs.update, {
+          await ctx.runMutation(internal.jobs.updateInternal, {
             id: jobId,
             isFetched: true,
             ...updateableFields,
@@ -489,7 +493,7 @@ export const fetchJobDetails = internalAction({
         }
       } else {
         // Even if no details were parsed, mark as fetched to avoid reprocessing
-        await ctx.runMutation(api.jobs.update, {
+        await ctx.runMutation(internal.jobs.updateInternal, {
           id: jobId,
           isFetched: true,
         });
@@ -709,71 +713,14 @@ export const refetchJob = action({
       return { success: false, error: "Job has no URL to refetch." };
     }
 
-    const result = await ctx.runAction(
-      internal.scraper.fetchAndParseJobDetail,
-      {
-        jobId,
-        url: job.url,
-        companyId: job.companyId,
-      },
-    );
+    // Reuse the existing fetchJobDetails function
+    const result = await ctx.runAction(internal.scraper.fetchJobDetails, {
+      jobId,
+      jobUrl: job.url,
+      atsType: job.source,
+    });
 
-    return result;
-  },
-});
-
-export const fetchAndParseJobDetail = internalAction({
-  args: {
-    jobId: v.id("jobs"),
-    url: v.string(),
-    companyId: v.id("companies"),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    error: v.optional(v.string()),
-  }),
-  handler: async (
-    ctx,
-    { jobId, url, companyId },
-  ): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch job detail page: ${response.statusText}`,
-        );
-      }
-      const html = await response.text();
-
-      const parsedDetails = await parseJobDetails(html);
-
-      if (Object.keys(parsedDetails).length === 0) {
-        await ctx.runMutation(internal.scraper.addCompanyError, {
-          id: companyId,
-          errorType: "job_detail_parsing_failed",
-          errorMessage: "AI parser returned no details.",
-          url,
-        });
-        return { success: false, error: "Failed to parse job details." };
-      }
-
-      await ctx.runMutation(api.jobs.update, {
-        id: jobId,
-        ...parsedDetails,
-        lastScraped: Date.now(),
-      });
-
-      return { success: true };
-    } catch (error: any) {
-      console.error(`Error refetching job ${jobId}:`, error);
-      await ctx.runMutation(internal.scraper.addCompanyError, {
-        id: companyId,
-        errorType: "job_detail_refetch_failed",
-        errorMessage: error.message,
-        url,
-      });
-      return { success: false, error: error.message };
-    }
+    return { success: result.success, error: result.error };
   },
 });
 

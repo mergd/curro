@@ -1,7 +1,6 @@
 "use client";
 
-import type { CompanyFilters } from "./components";
-import type { CompanyWithJobCount } from "./components";
+import type { CompanyFilters, CompanyWithJobCount } from "./components";
 
 import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
@@ -186,7 +185,7 @@ function CompaniesContent({
   const { table } = useDataTable({
     data: filteredCompanies || [],
     columns: companiesColumns,
-    pageCount: Math.ceil((filteredCompanies?.length || 0) / 15),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "jobCount", desc: true }],
       pagination: { pageIndex: 0, pageSize: 15 },

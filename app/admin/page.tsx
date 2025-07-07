@@ -28,21 +28,6 @@ import { Suspense, useEffect, useMemo } from "react";
 
 export default function AdminPage() {
   const companies = useQuery(api.companies.listWithJobCounts);
-  const isAdmin = useQuery(api.auth.isAdmin);
-
-  if (isAdmin === undefined) {
-    return <div>Loading...</div>;
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold">Unauthorized</h1>
-        <p>You do not have permission to view this page.</p>
-      </div>
-    );
-  }
-
   const errorStats = useQuery(api.companies.getErrorStats);
 
   const tabItems: TabItem[] = useMemo(
@@ -339,7 +324,7 @@ function CompaniesTable() {
   const { table } = useDataTable({
     data: companies || [],
     columns,
-    pageCount: Math.ceil((companies?.length || 0) / 10),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "name", desc: false }],
       pagination: { pageIndex: 0, pageSize: 10 },
@@ -385,7 +370,7 @@ function BookmarksTable() {
   const { table } = useDataTable({
     data: bookmarkedJobs || [],
     columns: bookmarksColumns,
-    pageCount: Math.ceil((bookmarkedJobs?.length || 0) / 10),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "_creationTime", desc: true }],
       pagination: { pageIndex: 0, pageSize: 10 },

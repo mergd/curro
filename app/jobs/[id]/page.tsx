@@ -32,12 +32,15 @@ import {
   ExternalLinkIcon,
   FileTextIcon,
   GlobeIcon,
+  InfoCircledIcon,
   Pencil1Icon,
   PersonIcon,
+  ReloadIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { Suspense, use, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 interface JobDetailPageProps {
   params: Promise<{
@@ -56,6 +59,16 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
   const addBookmark = useMutation(api.bookmarks.add);
   const removeBookmark = useMutation(api.bookmarks.remove);
 
+  const refetchJob = useAction(api.scraper.refetchJob);
+
+  const handleRefetch = async () => {
+    const result = await refetchJob({ jobId: id as Id<"jobs"> });
+    if (result.success) {
+      toast.success("Job refetched successfully.");
+    } else {
+      toast.error(`Failed to refetch job: ${result.error}`);
+    }
+  };
   const [isEditing, setIsEditing] = useState(false);
 
   const hasEmbeddableATS = useMemo(() => {
@@ -185,27 +198,6 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
       }
     };
 
-    const getStatusColor = (statusValue: string) => {
-      switch (statusValue) {
-        case "applied":
-          return "blue";
-        case "screening":
-          return "yellow";
-        case "interviewing":
-          return "purple";
-        case "offered":
-          return "green";
-        case "hired":
-          return "green";
-        case "rejected":
-          return "red";
-        case "withdrawn":
-          return "gray";
-        default:
-          return "default";
-      }
-    };
-
     return (
       <div className="space-y-6">
         <div>
@@ -308,14 +300,44 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
               Back to Jobs
             </Link>
           </Button>
+
+          {isAdmin && (
+            <Button asChild variant="ghost" size="sm" className="">
+              <Link href={`/admin`}>
+                <Pencil1Icon className="size-4 mr-2" />
+                Back to Admin
+              </Link>
+            </Button>
+          )}
         </div>
+
+        {/* Non-logged-in user banner */}
+        {!user && (
+          <Card className="p-4 border-blue-200 bg-blue-50">
+            <div className="flex items-start gap-3">
+              <InfoCircledIcon className="size-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-medium text-blue-900">
+                  Sign in to track your applications
+                </h3>
+                <p className="text-sm text-blue-700 mt-1">
+                  Create an account to bookmark jobs, track application status,
+                  and manage your job search progress.
+                </p>
+                <Button asChild size="sm" className="mt-3">
+                  <Link href="/auth">Sign In Now</Link>
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
 
         <Card className="p-8">
           <div className="space-y-6">
             {/* Job Header */}
             <div className="flex items-start justify-between">
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
                   <h1 className="text-3xl font-bold">{job.title}</h1>
                   <Button
                     variant="outline"
@@ -329,7 +351,9 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                       <BookmarkIcon className="size-4" />
                     )}
                     {isBookmarked ? "Bookmarked" : "Bookmark"}
-                    {isAdmin && (
+                  </Button>
+                  {isAdmin && (
+                    <>
                       <Button
                         variant="outline"
                         size="sm"
@@ -339,8 +363,17 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                         <Pencil1Icon className="size-4" />
                         Edit
                       </Button>
-                    )}
-                  </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefetch}
+                        className="flex items-center gap-2"
+                      >
+                        <ReloadIcon className={`size-4 `} />
+                        Refetch{" "}
+                      </Button>
+                    </>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {job.company ? (

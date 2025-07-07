@@ -159,7 +159,6 @@ function CompanyActionsCell({ company }: { company: Company }) {
           {isScrapingInProgress ? "Scraping..." : "Force scrape jobs"}
         </DropdownMenuItem>
         <DropdownMenuItem className="">View details</DropdownMenuItem>
-        <DropdownMenuItem className="">Edit company</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

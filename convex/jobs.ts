@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
 import { api } from "./_generated/api";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
 import { requireAdmin } from "./_utils";
 import {
   COMPENSATION_TYPES,
@@ -192,6 +192,63 @@ export const update = mutation({
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    const { id, ...updateData } = args;
+    await ctx.db.patch(id, updateData);
+  },
+});
+
+// Internal mutation for scraper use - doesn't require admin auth
+export const updateInternal = internalMutation({
+  args: {
+    id: v.id("jobs"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    locations: v.optional(v.array(v.string())),
+    educationLevel: v.optional(createUnionValidator(EDUCATION_LEVELS)),
+    yearsOfExperience: v.optional(
+      v.object({
+        min: v.number(),
+        max: v.optional(v.number()),
+      }),
+    ),
+    roleType: v.optional(createUnionValidator(ROLE_TYPES)),
+    roleSubcategory: v.optional(v.string()),
+    employmentType: v.optional(createUnionValidator(EMPLOYMENT_TYPES)),
+    isInternship: v.optional(v.boolean()),
+    internshipRequirements: v.optional(
+      v.object({
+        graduationDate: v.optional(v.string()),
+        eligiblePrograms: v.optional(v.array(v.string())),
+        additionalRequirements: v.optional(v.string()),
+      }),
+    ),
+    additionalRequirements: v.optional(v.string()),
+    compensation: v.optional(
+      v.union(
+        ...COMPENSATION_TYPES.map((type) =>
+          v.object({
+            type: v.literal(type),
+            min: v.optional(v.number()),
+            max: v.optional(v.number()),
+            currency: v.optional(v.string()),
+          }),
+        ),
+      ),
+    ),
+    remoteOptions: v.optional(createUnionValidator(REMOTE_OPTIONS)),
+    remoteTimezonePreferences: v.optional(v.array(v.string())),
+    equity: v.optional(
+      v.object({
+        offered: v.boolean(),
+        percentage: v.optional(v.number()),
+        details: v.optional(v.string()),
+      }),
+    ),
+    lastScraped: v.optional(v.number()),
+    isFetched: v.optional(v.boolean()),
+    deletedAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
     const { id, ...updateData } = args;
     await ctx.db.patch(id, updateData);
   },
@@ -512,5 +569,29 @@ export const listPaginated = query({
       total: filteredJobs.length,
       hasMore: offset + limit < filteredJobs.length,
     };
+  },
+});
+
+export const clearAllJobsForCompany = mutation({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, { companyId }) => {
+    await requireAdmin(ctx);
+
+    // Get all active jobs for the company
+    const jobs = await ctx.db
+      .query("jobs")
+      .withIndex("by_company", (q) => q.eq("companyId", companyId))
+      .filter((q) => q.eq(q.field("deletedAt"), undefined))
+      .collect();
+
+    // Soft delete all jobs
+    const deletedCount = jobs.length;
+    await Promise.all(
+      jobs.map((job) => ctx.db.patch(job._id, { deletedAt: Date.now() })),
+    );
+
+    return { deletedCount };
   },
 });

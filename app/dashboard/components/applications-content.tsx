@@ -22,7 +22,7 @@ export function ApplicationsContent() {
   const { table } = useDataTable({
     data: applications || [],
     columns: applicationsColumns,
-    pageCount: Math.ceil((applications?.length || 0) / 10),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "lastUpdated", desc: true }],
       pagination: { pageIndex: 0, pageSize: 10 },

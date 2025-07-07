@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CompanyLogo } from "@/components/ui/company-logo";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -52,7 +61,8 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
   const [isScrapingInProgress, setIsScrapingInProgress] = useState(false);
   const [isClearingErrors, setIsClearingErrors] = useState(false);
   const [isResettingBackoff, setIsResettingBackoff] = useState(false);
-  const isAdmin = useQuery(api.auth.isAdmin);
+  const [isClearingJobs, setIsClearingJobs] = useState(false);
+  const [showClearJobsDialog, setShowClearJobsDialog] = useState(false);
 
   const { id } = use(params);
   const company = useQuery(api.companies.get, { id: id as any });
@@ -63,19 +73,7 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
   const forceScrape = useAction(api.scraper.scrape);
   const clearErrors = useMutation(api.companies.clearErrors);
   const resetBackoff = useMutation(api.companies.resetBackoff);
-
-  if (isAdmin === undefined) {
-    return <CompanyDetailSkeleton />;
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <h1 className="text-2xl font-bold">Unauthorized</h1>
-        <p>You do not have permission to view this page.</p>
-      </div>
-    );
-  }
+  const clearAllJobs = useMutation(api.jobs.clearAllJobsForCompany);
 
   const handleForceScrape = async () => {
     if (!company) return;
@@ -136,6 +134,22 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
       toast.error("Failed to reset backoff. Please try again.");
     } finally {
       setIsResettingBackoff(false);
+    }
+  };
+
+  const handleClearAllJobs = async () => {
+    if (!company) return;
+
+    setIsClearingJobs(true);
+    try {
+      const result = await clearAllJobs({ companyId: company._id });
+      toast.success(`Cleared ${result.deletedCount} jobs for ${company.name}.`);
+      setShowClearJobsDialog(false);
+    } catch (error) {
+      console.error("Error clearing jobs:", error);
+      toast.error("Failed to clear jobs. Please try again.");
+    } finally {
+      setIsClearingJobs(false);
     }
   };
 
@@ -267,6 +281,15 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
                     <ArrowClockwiseIcon className="size-4 mr-2" />
                     {isResettingBackoff ? "Resetting..." : "Reset backoff"}
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setShowClearJobsDialog(true)}
+                    disabled={isClearingJobs || !jobs?.length}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <TrashIcon className="size-4 mr-2" />
+                    Clear all jobs
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -323,6 +346,36 @@ export default function CompanyDetailPage({ params }: CompanyDetailPageProps) {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Clear All Jobs Confirmation Dialog */}
+      <Dialog open={showClearJobsDialog} onOpenChange={setShowClearJobsDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear All Jobs</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to clear all jobs for {company.name}? This
+              action will permanently remove {jobs?.length || 0} jobs and cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowClearJobsDialog(false)}
+              disabled={isClearingJobs}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleClearAllJobs}
+              disabled={isClearingJobs}
+            >
+              {isClearingJobs ? "Clearing..." : "Clear All Jobs"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -640,7 +693,7 @@ function CompanyJobsTable({ companyId }: { companyId: string }) {
   const { table } = useDataTable({
     data: jobs || [],
     columns: companyJobsColumns,
-    pageCount: Math.ceil((jobs?.length || 0) / 10),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "title", desc: false }],
       pagination: { pageIndex: 0, pageSize: 10 },
@@ -649,7 +702,7 @@ function CompanyJobsTable({ companyId }: { companyId: string }) {
 
   const handleRowClick = (row: any) => {
     const job = row.original;
-    router.push(`/admin/jobs/${job._id}`);
+    router.push(`/jobs/${job._id}`);
   };
 
   if (!jobs) {

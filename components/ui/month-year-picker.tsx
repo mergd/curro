@@ -67,12 +67,9 @@ export const MonthYearPicker = forwardRef<
     const currentMonth = currentDate ? currentDate.getMonth() : null;
     const currentYear = currentDate ? currentDate.getFullYear() : null;
 
-    // Generate year options (current year ± 20 years)
+    // Generate year options (current year - 20 years to current year)
     const currentYearActual = new Date().getFullYear();
-    const years = Array.from(
-      { length: 41 },
-      (_, i) => currentYearActual - 20 + i,
-    );
+    const years = Array.from({ length: 20 }, (_, i) => currentYearActual - i);
 
     const handleMonthChange = (month: string) => {
       const monthIndex = MONTHS.indexOf(month);

@@ -494,7 +494,7 @@ function CompanyJobsTable({ jobs }: { jobs: any[] }) {
   const { table } = useDataTable({
     data: jobs,
     columns: jobsColumns,
-    pageCount: Math.ceil(jobs.length / 10),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "_creationTime", desc: true }],
       pagination: { pageIndex: 0, pageSize: 10 },

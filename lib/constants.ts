@@ -20,6 +20,24 @@ export const COMPANY_STAGES = [
   "Acquired",
 ] as const;
 
+// Company stage meta categories for better filtering
+export const COMPANY_STAGE_META_CATEGORIES = [
+  "Very Early Stage",
+  "Early Stage",
+  "Mid Stage",
+  "Late Stage",
+  "IPO & Beyond",
+] as const;
+
+// Mapping of company stages to meta categories
+export const COMPANY_STAGE_MAPPING = {
+  "Very Early Stage": ["Pre-Seed", "Seed"],
+  "Early Stage": ["Series A", "Series B"],
+  "Mid Stage": ["Series C", "Series D"],
+  "Late Stage": ["Series E", "Growth", "Pre-IPO"],
+  "IPO & Beyond": ["Public", "Acquired"],
+} as const;
+
 export const SOURCE_TYPES = ["ashby", "greenhouse", "other"] as const;
 
 export const EMPLOYEE_COUNT_RANGES = [
@@ -297,6 +315,8 @@ export const createUnionValidator = <T extends readonly string[]>(
 
 // Type helpers for frontend use
 export type CompanyStage = (typeof COMPANY_STAGES)[number];
+export type CompanyStageMetaCategory =
+  (typeof COMPANY_STAGE_META_CATEGORIES)[number];
 export type SourceType = (typeof SOURCE_TYPES)[number];
 export type EmployeeCountRange = (typeof EMPLOYEE_COUNT_RANGES)[number];
 export type CompanyCategory = (typeof COMPANY_CATEGORIES)[number];

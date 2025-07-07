@@ -2,7 +2,7 @@ import { cronJobs } from "convex/server";
 import { v } from "convex/values";
 
 import { internal } from "./_generated/api";
-import { internalMutation } from "./_generated/server";
+import { internalAction, internalMutation } from "./_generated/server";
 
 const crons = cronJobs();
 
@@ -22,7 +22,25 @@ crons.cron(
 
 export default crons;
 
-export const cleanupOldErrors = internalMutation({
+export const cleanupOldErrors = internalAction({
+  args: {},
+  returns: v.object({
+    totalErrorsCleaned: v.number(),
+    companiesUpdated: v.number(),
+    totalCompaniesChecked: v.number(),
+  }),
+  handler: async (
+    ctx,
+  ): Promise<{
+    totalErrorsCleaned: number;
+    companiesUpdated: number;
+    totalCompaniesChecked: number;
+  }> => {
+    return await ctx.runMutation(internal.cronJobs.cleanupOldErrorsInternal);
+  },
+});
+
+export const cleanupOldErrorsInternal = internalMutation({
   args: {},
   returns: v.object({
     totalErrorsCleaned: v.number(),
@@ -44,7 +62,7 @@ export const cleanupOldErrors = internalMutation({
 
       // Filter out errors older than 24 hours
       const recentErrors = company.scrapingErrors.filter(
-        (error) => error.timestamp > twentyFourHoursAgo,
+        (error: { timestamp: number }) => error.timestamp > twentyFourHoursAgo,
       );
 
       // Only update if there were old errors to remove

@@ -112,7 +112,17 @@ export function DataTable<TData>({
                     <TableRow
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
-                      onClick={() => onRowClick && onRowClick(row)}
+                      onClick={(e) => {
+                        // Prevent row click if clicking on interactive elements
+                        const target = e.target as HTMLElement;
+                        const isInteractiveElement = target.closest(
+                          'button, a, input, select, textarea, [role="button"], [role="menuitem"], [data-radix-collection-item]',
+                        );
+
+                        if (!isInteractiveElement && onRowClick) {
+                          onRowClick(row);
+                        }
+                      }}
                       className={onRowClick ? "cursor-pointer" : ""}
                     >
                       {row.getVisibleCells().map((cell) => (

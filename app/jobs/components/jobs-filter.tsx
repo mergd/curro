@@ -15,6 +15,8 @@ import { TimezoneDropdown } from "@/components/ui/timezone-dropdown";
 import {
   ALL_FILTER_VALUE,
   COMPANY_CATEGORIES,
+  COMPANY_STAGE_MAPPING,
+  COMPANY_STAGE_META_CATEGORIES,
   COMPANY_STAGES,
   EMPLOYMENT_TYPE_OPTIONS,
   LOCATION_HIERARCHY,
@@ -163,6 +165,19 @@ export function JobsFilter({
               return country ? country[1].name : countryCode;
             })
             .join(", ");
+        } else if (key === "companyStage") {
+          // Convert individual stages to meta categories for display
+          const selectedMetaCategories: string[] = [];
+
+          for (const [metaCategory, stages] of Object.entries(
+            COMPANY_STAGE_MAPPING,
+          )) {
+            if (stages.some((stage) => value.includes(stage))) {
+              selectedMetaCategories.push(metaCategory);
+            }
+          }
+
+          displayValue = selectedMetaCategories.join(", ");
         } else {
           displayValue = value.join(", ");
         }
@@ -479,14 +494,44 @@ export function JobsFilter({
                     Company Stage
                   </Label>
                   <MultiSelect
-                    options={COMPANY_STAGES.map((stage) => ({
-                      value: stage,
-                      label: stage,
-                    }))}
-                    value={filters.companyStage}
-                    onValueChange={(value) =>
-                      onFilterChange("companyStage", value)
-                    }
+                    options={COMPANY_STAGE_META_CATEGORIES.map(
+                      (metaCategory) => ({
+                        value: metaCategory,
+                        label: metaCategory,
+                      }),
+                    )}
+                    value={(() => {
+                      // Convert selected individual stages back to meta categories
+                      const selectedMetaCategories: string[] = [];
+
+                      for (const [metaCategory, stages] of Object.entries(
+                        COMPANY_STAGE_MAPPING,
+                      )) {
+                        if (
+                          stages.some((stage) =>
+                            filters.companyStage.includes(stage),
+                          )
+                        ) {
+                          selectedMetaCategories.push(metaCategory);
+                        }
+                      }
+
+                      return selectedMetaCategories;
+                    })()}
+                    onValueChange={(selectedMetaCategories) => {
+                      // Convert meta categories to individual stages
+                      const individualStages: string[] = [];
+
+                      for (const metaCategory of selectedMetaCategories) {
+                        const stages =
+                          COMPANY_STAGE_MAPPING[
+                            metaCategory as keyof typeof COMPANY_STAGE_MAPPING
+                          ];
+                        individualStages.push(...stages);
+                      }
+
+                      onFilterChange("companyStage", individualStages);
+                    }}
                     placeholder="Any stage"
                     className="mt-1"
                   />

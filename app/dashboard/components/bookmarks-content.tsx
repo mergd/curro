@@ -40,7 +40,7 @@ export function BookmarksContent() {
   const { table } = useDataTable({
     data: bookmarkedJobs || [],
     columns: bookmarksColumns,
-    pageCount: Math.ceil((bookmarkedJobs?.length || 0) / 10),
+    pageCount: -1, // Client-side pagination
     initialState: {
       sorting: [{ id: "_creationTime", desc: true }],
       pagination: { pageIndex: 0, pageSize: 10 },
