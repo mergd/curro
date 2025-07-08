@@ -69,7 +69,7 @@ export default function HomePage() {
             <Item>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl md:text-3xl font-bold font-display">
+                  <h2 className="text-xl md:text-2xl font-bold font-display">
                     Latest Opportunities
                   </h2>
                   <p className="text-muted-foreground mt-1">

@@ -1,5 +1,7 @@
 {
   "node": {
-    "externalPackages": ["jsdom"]
+    "externalPackages": [
+      "jsdom"
+    ]
   }
 }

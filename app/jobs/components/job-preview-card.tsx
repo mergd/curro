@@ -45,7 +45,7 @@ export function JobPreviewCard({ job }: JobPreviewCardProps) {
 
   return (
     <Link href={`/jobs/${job._id}`} className="block">
-      <Card className="p-4 hover:shadow-lg transition-shadow cursor-pointer border border-border">
+      <Card className="p-4 min-h-[250px] hover:shadow-lg transition-shadow cursor-pointer border border-border">
         <div className="space-y-4">
           {/* Header */}
           <div className="flex items-start justify-between">

@@ -27,6 +27,7 @@ import {
   ArrowLeftIcon,
   BookmarkFilledIcon,
   BookmarkIcon,
+  CalendarIcon,
   CheckIcon,
   ClockIcon,
   ExternalLinkIcon,
@@ -375,57 +376,131 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                     </>
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  {job.company ? (
-                    <CompanyPreviewPopover
-                      companyId={job.company._id}
-                      side="bottom"
-                      align="start"
-                    >
-                      <button className="text-xl text-muted-foreground hover:text-foreground transition-colors text-left">
-                        {job.company.name}
-                      </button>
-                    </CompanyPreviewPopover>
-                  ) : (
-                    <span className="text-xl text-muted-foreground">
-                      Unknown Company
-                    </span>
+              </div>
+            </div>
+
+            {/* Company Preview Section */}
+            {job.company && (
+              <Card className="p-6 bg-muted/30">
+                <div className="space-y-4">
+                  {/* Company Header */}
+                  <div className="flex items-start gap-4">
+                    <CompanyLogo
+                      logoUrl={job.company.logoUrl}
+                      companyName={job.company.name}
+                      size="lg"
+                      className="flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h2 className="text-xl font-semibold">
+                          {job.company.name}
+                        </h2>
+                        {job.company.website && (
+                          <Button asChild variant="outline" size="sm">
+                            <Link
+                              href={job.company.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLinkIcon className="size-4 mr-1" />
+                              Website
+                            </Link>
+                          </Button>
+                        )}
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/companies/${job.company._id}`}>
+                            View Company
+                          </Link>
+                        </Button>
+                      </div>
+
+                      {job.company.stage && (
+                        <Badge color="blue" className="mb-2">
+                          {job.company.stage}
+                        </Badge>
+                      )}
+
+                      {job.company.description && (
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {job.company.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Company Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    {job.company.foundedYear && (
+                      <div className="flex items-center gap-2">
+                        <CalendarIcon className="size-4 text-muted-foreground" />
+                        <span>Founded {job.company.foundedYear}</span>
+                      </div>
+                    )}
+
+                    {job.company.numberOfEmployees && (
+                      <div className="flex items-center gap-2">
+                        <PersonIcon className="size-4 text-muted-foreground" />
+                        <span>{job.company.numberOfEmployees}</span>
+                      </div>
+                    )}
+
+                    {job.company.locations &&
+                      job.company.locations.length > 0 && (
+                        <div className="flex items-center gap-2 col-span-2">
+                          <GlobeIcon className="size-4 text-muted-foreground" />
+                          <span>
+                            {job.company.locations.slice(0, 3).join(", ")}
+                            {job.company.locations.length > 3 &&
+                              ` +${job.company.locations.length - 3} more`}
+                          </span>
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Tags and Categories */}
+                  {(job.company.category || job.company.tags) && (
+                    <div className="flex flex-wrap gap-2">
+                      {job.company.category?.slice(0, 3).map((cat) => (
+                        <Badge key={cat} color="green">
+                          {cat}
+                        </Badge>
+                      ))}
+                      {job.company.tags?.slice(0, 2).map((tag) => (
+                        <Badge key={tag} color="gray">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
                   )}
-                  {job.company?.website && (
-                    <Link
-                      href={job.company.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {job.company.website}
-                    </Link>
+
+                  {/* Recent Financing */}
+                  {job.company.recentFinancing && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">
+                        Recent financing:{" "}
+                      </span>
+                      <span className="font-medium text-green-600">
+                        ${job.company.recentFinancing.amount?.toLocaleString()}
+                      </span>
+                      {job.company.recentFinancing.date && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          raised in {job.company.recentFinancing.date}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Last Updated */}
+                  {job.company.lastScraped && (
+                    <div className="text-xs text-muted-foreground">
+                      Company data updated {timeAgo(job.company.lastScraped)}
+                    </div>
                   )}
                 </div>
-              </div>
-              {job.company ? (
-                <CompanyPreviewPopover
-                  companyId={job.company._id}
-                  side="bottom"
-                  align="end"
-                >
-                  <div>
-                    <CompanyLogo
-                      logoUrl={job.company?.logoUrl}
-                      companyName={job.company?.name || "Unknown Company"}
-                      size="lg"
-                      className="cursor-pointer hover:opacity-80 transition-opacity"
-                    />
-                  </div>
-                </CompanyPreviewPopover>
-              ) : (
-                <CompanyLogo
-                  logoUrl={undefined}
-                  companyName="Unknown Company"
-                  size="lg"
-                />
-              )}
-            </div>
+              </Card>
+            )}
 
             {/* Job Meta */}
             <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -529,7 +604,7 @@ export default function JobDetailPage({ params }: JobDetailPageProps) {
                           {job.company.sourceType === "greenhouse"
                             ? "Greenhouse"
                             : "Ashby"}{" "}
-                          interface below
+                          interface below.
                         </p>
                       </div>
                       <Button asChild variant="outline" size="sm">

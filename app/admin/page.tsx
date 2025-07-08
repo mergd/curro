@@ -8,7 +8,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton";
 import { DataTableToolbar } from "@/components/data-table/data-table-toolbar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList } from "@/components/ui/tabs";
 import { api } from "@/convex/_generated/api";
 import { useDataTable } from "@/hooks/use-data-table";
@@ -19,15 +19,14 @@ import {
   ExclamationTriangleIcon,
   GearIcon,
   PlusCircledIcon,
-  PlusIcon,
 } from "@radix-ui/react-icons";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 export default function AdminPage() {
-  const companies = useQuery(api.companies.listWithJobCounts);
   const errorStats = useQuery(api.companies.getErrorStats);
 
   const tabItems: TabItem[] = useMemo(
@@ -144,6 +143,10 @@ export default function AdminPage() {
 
 function OverviewContent() {
   const errorStats = useQuery(api.companies.getErrorStats);
+  const forceCleanup = useMutation(api.jobs.forceCleanupOldErrors);
+  const forceScrapeAll = useAction(api.scraper.forceScrapeAllCompanies);
+  const [isCleaning, setIsCleaning] = useState(false);
+  const [isScraping, setIsScraping] = useState(false);
 
   if (!errorStats) {
     return <div>Loading...</div>;
@@ -158,6 +161,34 @@ function OverviewContent() {
     0,
   );
   const healthyCompanies = totalCompanies - problematicCompanies;
+
+  const handleForceCleanup = async () => {
+    setIsCleaning(true);
+    try {
+      const result = await forceCleanup({});
+      toast.success(
+        `Cleanup complete: ${result.totalErrorsCleaned} errors cleaned from ${result.companiesUpdated} companies.`,
+      );
+    } catch (error) {
+      toast.error("Failed to force cleanup. Please try again.");
+    } finally {
+      setIsCleaning(false);
+    }
+  };
+
+  const handleForceScrapeAll = async () => {
+    setIsScraping(true);
+    try {
+      const result = await forceScrapeAll({});
+      toast.success(
+        `Scrape scheduled for ${result.companiesScheduled} companies.`,
+      );
+    } catch (error) {
+      toast.error("Failed to force scrape. Please try again.");
+    } finally {
+      setIsScraping(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -255,6 +286,30 @@ function OverviewContent() {
                   ? "Minor issues detected, monitoring required"
                   : "Critical issues detected, immediate attention required"}
             </div>
+          </div>
+          <div className="pt-4 flex flex-col sm:flex-row gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={handleForceCleanup}
+              disabled={isCleaning}
+              className="gap-2"
+            >
+              <GearIcon
+                className={`size-4 ${isCleaning ? "animate-spin" : ""}`}
+              />
+              {isCleaning ? "Cleaning..." : "Force Cleanup Now"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleForceScrapeAll}
+              disabled={isScraping}
+              className="gap-2"
+            >
+              <GearIcon
+                className={`size-4 ${isScraping ? "animate-spin" : ""}`}
+              />
+              {isScraping ? "Scraping..." : "Force Scrape All Now"}
+            </Button>
           </div>
         </div>
       </Card>

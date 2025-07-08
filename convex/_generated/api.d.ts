@@ -8,12 +8,6 @@
  * @module
  */
 
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
-
 import type * as _utils from "../_utils.js";
 import type * as adapters_ashby from "../adapters/ashby.js";
 import type * as adapters_base from "../adapters/base.js";
@@ -27,7 +21,7 @@ import type * as bookmarks from "../bookmarks.js";
 import type * as companies from "../companies.js";
 import type * as companyRequests from "../companyRequests.js";
 import type * as constants from "../constants.js";
-import type * as cronJobs from "../cronJobs.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as jobs from "../jobs.js";
 import type * as parsers_aiParser from "../parsers/aiParser.js";
@@ -35,8 +29,14 @@ import type * as resumes from "../resumes.js";
 import type * as scraper from "../scraper.js";
 import type * as scrapingMetrics from "../scrapingMetrics.js";
 import type * as userProfiles from "../userProfiles.js";
-import type * as utils from "../utils.js";
 import type * as utils_backoff from "../utils/backoff.js";
+import type * as utils from "../utils.js";
+
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -60,7 +60,7 @@ declare const fullApi: ApiFromModules<{
   companies: typeof companies;
   companyRequests: typeof companyRequests;
   constants: typeof constants;
-  cronJobs: typeof cronJobs;
+  crons: typeof crons;
   http: typeof http;
   jobs: typeof jobs;
   "parsers/aiParser": typeof parsers_aiParser;

@@ -14,7 +14,7 @@ const logos = [
 export function LogoCloud() {
   return (
     <div className=" py-8">
-      <div className="mx-auto max-w-4xl px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-6 lg:px-6">
         <div className="text-center mb-12">
           <h2 className="text-md tracking-tighter font-semibold text-muted-foreground">
             Find your next job at

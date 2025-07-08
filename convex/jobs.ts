@@ -1,7 +1,12 @@
 import { v } from "convex/values";
 
-import { api } from "./_generated/api";
-import { internalMutation, mutation, query } from "./_generated/server";
+import { api, internal } from "./_generated/api";
+import {
+  internalAction,
+  internalMutation,
+  mutation,
+  query,
+} from "./_generated/server";
 import { requireAdmin } from "./_utils";
 import {
   COMPENSATION_TYPES,
@@ -809,5 +814,92 @@ export const clearAllJobsForCompany = mutation({
     );
 
     return { deletedCount };
+  },
+});
+
+export const cleanupOldErrors = internalAction({
+  args: {},
+  returns: v.object({
+    totalErrorsCleaned: v.number(),
+    companiesUpdated: v.number(),
+    totalCompaniesChecked: v.number(),
+  }),
+  handler: async (
+    ctx: any,
+  ): Promise<{
+    totalErrorsCleaned: number;
+    companiesUpdated: number;
+    totalCompaniesChecked: number;
+  }> => {
+    // Use the correct internal reference for the mutation
+    return await ctx.runMutation(internal.jobs.cleanupOldErrorsInternal);
+  },
+});
+
+export const cleanupOldErrorsInternal = internalMutation({
+  args: {},
+  returns: v.object({
+    totalErrorsCleaned: v.number(),
+    companiesUpdated: v.number(),
+    totalCompaniesChecked: v.number(),
+  }),
+  handler: async (ctx: any) => {
+    const companies = await ctx.db.query("companies").collect();
+    const now = Date.now();
+    const twentyFourHoursAgo = now - 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+    let totalCleaned = 0;
+    let companiesUpdated = 0;
+
+    for (const company of companies) {
+      if (!company.scrapingErrors || company.scrapingErrors.length === 0) {
+        continue;
+      }
+
+      // Filter out errors older than 24 hours
+      const recentErrors = company.scrapingErrors.filter(
+        (error: { timestamp: number }) => error.timestamp > twentyFourHoursAgo,
+      );
+
+      // Only update if there were old errors to remove
+      if (recentErrors.length < company.scrapingErrors.length) {
+        const removedCount =
+          company.scrapingErrors.length - recentErrors.length;
+        totalCleaned += removedCount;
+        companiesUpdated++;
+
+        await ctx.db.patch(company._id, {
+          scrapingErrors: recentErrors,
+        });
+      }
+    }
+
+    return {
+      totalErrorsCleaned: totalCleaned,
+      companiesUpdated,
+      totalCompaniesChecked: companies.length,
+    };
+  },
+});
+
+/**
+ * Admin-only mutation to force run the cleanup of old errors.
+ */
+export const forceCleanupOldErrors: ReturnType<typeof mutation> = mutation({
+  args: {},
+  returns: v.object({
+    totalErrorsCleaned: v.number(),
+    companiesUpdated: v.number(),
+    totalCompaniesChecked: v.number(),
+  }),
+  handler: async (
+    ctx,
+  ): Promise<{
+    totalErrorsCleaned: number;
+    companiesUpdated: number;
+    totalCompaniesChecked: number;
+  }> => {
+    await requireAdmin(ctx);
+    return await ctx.runMutation(internal.jobs.cleanupOldErrorsInternal);
   },
 });

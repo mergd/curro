@@ -1,7 +1,13 @@
 import { v } from "convex/values";
 
 import { api, internal } from "./_generated/api";
-import { action, internalAction, internalMutation } from "./_generated/server";
+import {
+  action,
+  internalAction,
+  internalMutation,
+  mutation,
+} from "./_generated/server";
+import { requireAdminAction } from "./_utils";
 import { AshbyAdapter } from "./adapters/ashby";
 import { GenericAdapter } from "./adapters/generic";
 import { GreenhouseAdapter } from "./adapters/greenhouse";
@@ -768,5 +774,19 @@ export const addCompanyError = internalMutation({
       `Added error for company ${id}: ${errorType} - ${errorMessage}. ` +
         `Recent errors: ${recentErrors.length}, Backoff: ${getBackoffStatusDescription(newBackoffInfo)}`,
     );
+  },
+});
+
+export const forceScrapeAllCompanies: ReturnType<typeof action> = action({
+  args: {},
+  returns: v.object({
+    success: v.boolean(),
+    companiesScheduled: v.number(),
+  }),
+  handler: async (
+    ctx: any,
+  ): Promise<{ success: boolean; companiesScheduled: number }> => {
+    await requireAdminAction(ctx);
+    return await ctx.runAction(internal.scraper.scrapeAllCompanies, {});
   },
 });
