@@ -25,6 +25,23 @@ interface FormActionsProps {
   className?: string;
 }
 
+interface FormTitleProps {
+  title: string;
+  description?: string;
+  className?: string;
+}
+
+function FormTitle({ title, description, className }: FormTitleProps) {
+  return (
+    <div className={cn("space-y-1", className)}>
+      {title && <h2 className="text-lg font-medium">{title}</h2>}
+      {description && (
+        <p className="text-sm text-muted-foreground">{description}</p>
+      )}
+    </div>
+  );
+}
+
 function FormLayout({ children, className }: FormLayoutProps) {
   return <div className={cn("space-y-8", className)}>{children}</div>;
 }
@@ -78,4 +95,4 @@ function FormActions({ children, className }: FormActionsProps) {
   );
 }
 
-export { FormLayout, FormSection, FormGrid, FormActions };
+export { FormLayout, FormSection, FormGrid, FormActions, FormTitle };

@@ -17,6 +17,7 @@ import {
   FormGrid,
   FormLayout,
   FormSection,
+  FormTitle,
 } from "@/components/ui/form-layout";
 import { Input } from "@/components/ui/input";
 import {
@@ -215,7 +216,7 @@ export function UserProfileForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <FormLayout>
-          <FormSection
+          <FormTitle
             title="Update Your Profile"
             description="Keep your profile up to date to get better job recommendations."
           />
