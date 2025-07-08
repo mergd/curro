@@ -203,6 +203,12 @@ importers:
       postcss-nested:
         specifier: ^6.2.0
         version: 6.2.0(postcss@8.4.47)
+      posthog-js:
+        specifier: ^1.256.2
+        version: 1.256.2
+      posthog-node:
+        specifier: ^5.3.1
+        version: 5.3.1
       puppeteer:
         specifier: ^24.11.0
         version: 24.11.0(typescript@5.6.3)
@@ -4228,6 +4234,12 @@ packages:
       }
     engines: { node: ">=18" }
 
+  core-js@3.44.0:
+    resolution:
+      {
+        integrity: sha512-aFCtd4l6GvAXwVEh3XbbVqJGHDJt0OZRa+5ePGx3LLwi12WfexqQxcsohb2wgsa/92xtl19Hd66G/L+TaAxDMw==,
+      }
+
   cosmiconfig@9.0.0:
     resolution:
       {
@@ -5164,6 +5176,12 @@ packages:
     resolution:
       {
         integrity: sha512-cE1qsB/VwyQozZ+q1dGxR8LBYNZeofhEdUNGSMbQD3Gw2lAzX9Zb3uIU6Ebc/Fmyjo9AWWfnn0AUCHqtevs/8g==,
+      }
+
+  fflate@0.4.8:
+    resolution:
+      {
+        integrity: sha512-FJqqoDBR00Mdj9ppamLa/Y7vxm+PRmNWA67N846RvsoYVMKB4q3y/de5PA7gUmRMYK/8CMz2GDZQmCRN1wBcWA==,
       }
 
   fflate@0.8.2:
@@ -7941,6 +7959,27 @@ packages:
       }
     engines: { node: ^10 || ^12 || >=14 }
 
+  posthog-js@1.256.2:
+    resolution:
+      {
+        integrity: sha512-ypepnUHr33i5a1Uk39mozZXXTENRPC17HCG3WHKK6aRcpNwNs8uEqXaIKICGNM+qre+totKeTgl0WoaUFYmyoQ==,
+      }
+    peerDependencies:
+      "@rrweb/types": 2.0.0-alpha.17
+      rrweb-snapshot: 2.0.0-alpha.17
+    peerDependenciesMeta:
+      "@rrweb/types":
+        optional: true
+      rrweb-snapshot:
+        optional: true
+
+  posthog-node@5.3.1:
+    resolution:
+      {
+        integrity: sha512-rCGf5Od7+lLHYLQvkBXrHt2Q8vuf0hzs95HLzDwqLQMltNxatqDxK1vPWbpa5YoEUxhiGoikTQ1cEbqCkEV+kA==,
+      }
+    engines: { node: ">=20" }
+
   preact-render-to-string@6.5.11:
     resolution:
       {
@@ -9619,6 +9658,12 @@ packages:
     resolution:
       {
         integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==,
+      }
+
+  web-vitals@4.2.4:
+    resolution:
+      {
+        integrity: sha512-r4DIlprAGwJ7YM11VZp4R884m0Vmgr6EAKe3P+kO0PPj3Unqyvv59rczf6UiGcb9Z8QxZVcqKNwv/g0WNdWwsw==,
       }
 
   webidl-conversions@3.0.1:
@@ -12495,6 +12540,8 @@ snapshots:
 
   cookie@1.0.2: {}
 
+  core-js@3.44.0: {}
+
   cosmiconfig@9.0.0(typescript@5.6.3):
     dependencies:
       env-paths: 2.2.1
@@ -13265,6 +13312,8 @@ snapshots:
   fd-slicer@1.1.0:
     dependencies:
       pend: 1.2.0
+
+  fflate@0.4.8: {}
 
   fflate@0.8.2: {}
 
@@ -15203,6 +15252,15 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  posthog-js@1.256.2:
+    dependencies:
+      core-js: 3.44.0
+      fflate: 0.4.8
+      preact: 10.24.3
+      web-vitals: 4.2.4
+
+  posthog-node@5.3.1: {}
+
   preact-render-to-string@6.5.11(preact@10.24.3):
     dependencies:
       preact: 10.24.3
@@ -16347,6 +16405,8 @@ snapshots:
       defaults: 1.0.4
 
   web-namespaces@2.0.1: {}
+
+  web-vitals@4.2.4: {}
 
   webidl-conversions@3.0.1: {}
 

@@ -3,7 +3,6 @@ p0: for launch
 [ ] pagination broken for tables
 [ ] refetch when queries are updated
 [ ] Add analytics for site and backend
-[ ] Full text search for jobs
 
 Lucas:
 [ ] Add lever ATS
